@@ -397,11 +397,30 @@
             margin-top: 28px;
         }
 
+        .list-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 10px 16px 0;
+        }
+
         .footer-note {
             font-size: 13px;
             color: var(--ios-gray);
-            padding: 8px 16px 0;
         }
+
+        .clear-btn {
+            border: none;
+            background: none;
+            padding: 4px 0;
+            font-family: inherit;
+            font-size: 13px;
+            color: var(--ios-blue);
+            cursor: pointer;
+        }
+
+        .clear-btn:active { opacity: 0.5; }
 
         /* Камера */
         #cameraModal {
@@ -597,7 +616,10 @@
         </form>
 
         <div id="tableSection"></div>
-        <div id="counter" class="footer-note"></div>
+        <div class="list-footer">
+            <span id="counter" class="footer-note"></span>
+            <button type="button" class="clear-btn" id="clearBtn" style="display:none;">Очистить список</button>
+        </div>
 
     </div>
 
@@ -635,19 +657,30 @@
         let photosDirty = false;
         let warehouse = '';
         let accessKey = '';
+        const MAX_LOCAL_ITEMS = 30;   // сколько последних записей держим в телефоне
         const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwZmMCxv7ujqEkE_3N0ODruaKWLt6qVa9MW42p9vo1n2MpREhTjSKfMM3O_5XZlxYx-/exec';
 
         function saveItems() {
             try {
                 localStorage.setItem('inventoryItems', JSON.stringify(items));
             } catch (e) {
-                alert('Память браузера заполнена. Товары уже отправлены в Google Sheets — удалите часть записей из списка, чтобы продолжить.');
+                // память кончилась — освобождаем место за счёт самых старых записей
+                while (items.length > 5) {
+                    items = items.slice(-Math.ceil(items.length / 2));
+                    try {
+                        localStorage.setItem('inventoryItems', JSON.stringify(items));
+                        renderTable();
+                        return;
+                    } catch (e2) { /* пробуем ещё раз */ }
+                }
+                alert('Не удалось сохранить список в памяти телефона. Записи уже отправлены в таблицу.');
             }
         }
 
         function loadItems() {
             const saved = localStorage.getItem('inventoryItems');
             items = saved ? JSON.parse(saved) : [];
+            if (items.length > MAX_LOCAL_ITEMS) items = items.slice(-MAX_LOCAL_ITEMS);
         }
 
         /* ---------- Камера ---------- */
@@ -833,6 +866,8 @@
                 await sendToGoogleSheets(forUpload, true);
             } else {
                 items.push(item);
+                // в таблице записи остаются навсегда, в телефоне — только последние
+                if (items.length > MAX_LOCAL_ITEMS) items = items.slice(-MAX_LOCAL_ITEMS);
                 await sendToGoogleSheets(Object.assign({}, item, { photo: fullPhoto, photo2: fullPhoto2 }));
             }
 
@@ -952,8 +987,11 @@
             const section = document.getElementById('tableSection');
             const counter = document.getElementById('counter');
 
+            const clearBtn = document.getElementById('clearBtn');
+
             if (items.length === 0) {
                 counter.textContent = '';
+                clearBtn.style.display = 'none';
                 section.innerHTML = '<div class="empty">Пока пусто. Добавьте первый товар.</div>';
                 return;
             }
@@ -998,7 +1036,8 @@
             html += '</div>';
 
             section.innerHTML = html;
-            counter.textContent = 'Всего: ' + items.length;
+            counter.textContent = 'В приложении: ' + items.length + ' из последних ' + MAX_LOCAL_ITEMS;
+            clearBtn.style.display = 'block';
         }
 
         function escapeHtml(str) {
@@ -1066,6 +1105,13 @@
             document.getElementById('operatorName').textContent = operator;
             if (force && !warehouse) setTimeout(() => askWarehouse(true), 200);
         }
+
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            if (!confirm('Очистить список на этом устройстве?\n\nЗаписи останутся в Google Таблице — исчезнут только с экрана.')) return;
+            items = [];
+            saveItems();
+            renderTable();
+        });
 
         document.getElementById('operatorBtn').addEventListener('click', () => askOperator(false));
         document.getElementById('warehouseBtn').addEventListener('click', () => askWarehouse(false));
