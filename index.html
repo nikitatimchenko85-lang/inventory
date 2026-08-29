@@ -637,7 +637,8 @@
         let operator = '';
         let photosDirty = false;
         let warehouse = '';
-        const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwTvtZw-WD_2Gw_mfgo_LJaciAwSa5JHjsOdGwHhLPbf2TqrxJ2qSPK-8_iG-U2uEmT/exec';
+        let accessKey = '';
+        const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwZmMCxv7ujqEkE_3N0ODruaKWLt6qVa9MW42p9vo1n2MpREhTjSKfMM3O_5XZlxYx-/exec';
 
         function saveItems() {
             try {
@@ -791,6 +792,11 @@
                 return;
             }
 
+            if (!accessKey) {
+                askKey(true);
+                return;
+            }
+
             if (!operator) {
                 alert('Сначала укажите своё имя вверху экрана');
                 askOperator(true);
@@ -910,6 +916,7 @@
 
                 const data = {
                     action: isEdit ? 'update' : 'add',
+                    key: accessKey,
                     id: String(item.id),
                     operator: operator,
                     name: item.name,
@@ -922,7 +929,10 @@
 
                 fetch(GOOGLE_SHEETS_URL, { method: 'POST', body: JSON.stringify(data) })
                     .then(r => r.json())
-                    .then(res => console.log(res.status === 'success' ? '✅' : '❌', item.name))
+                    .then(res => {
+                        if (res.code === 'auth') keyRejected();
+                        else console.log(res.status === 'success' ? '✅' : '❌', item.name);
+                    })
                     .catch(err => console.error(err));
             } catch (e) {
                 console.error(e);
@@ -932,8 +942,11 @@
         function sendDeleteToGoogleSheets(item) {
             fetch(GOOGLE_SHEETS_URL, {
                 method: 'POST',
-                body: JSON.stringify({ action: 'delete', id: String(item.id), name: item.name })
-            }).catch(e => console.error(e));
+                body: JSON.stringify({ action: 'delete', key: accessKey, id: String(item.id), name: item.name })
+            })
+                .then(r => r.json())
+                .then(res => { if (res.code === 'auth') keyRejected(); })
+                .catch(e => console.error(e));
         }
 
         /* ---------- Список ---------- */
@@ -1005,6 +1018,29 @@
             document.getElementById('operatorName').textContent = operator || 'Не задан';
         }
 
+        function loadKey() {
+            accessKey = localStorage.getItem('inventoryKey') || '';
+        }
+
+        function askKey(force) {
+            const entered = prompt('Пароль доступа (спросите у ответственного за таблицу):', '');
+            const clean = entered === null ? '' : entered.trim();
+            if (!clean) {
+                if (force) setTimeout(() => askKey(true), 150);
+                return;
+            }
+            accessKey = clean;
+            localStorage.setItem('inventoryKey', accessKey);
+            if (force && !operator) setTimeout(() => askOperator(true), 200);
+        }
+
+        function keyRejected() {
+            accessKey = '';
+            localStorage.removeItem('inventoryKey');
+            alert('Пароль не подошёл. Введите ещё раз.');
+            setTimeout(() => askKey(true), 150);
+        }
+
         function loadWarehouse() {
             warehouse = localStorage.getItem('inventoryWarehouse') || '';
             document.getElementById('warehouseName').textContent = warehouse || 'Не задан';
@@ -1041,12 +1077,16 @@
         document.getElementById('warehouseBtn').addEventListener('click', () => askWarehouse(false));
 
         loadItems();
+        loadKey();
         loadOperator();
         loadWarehouse();
         updatePhotoStrip();
         renderTable();
 
-        if (!operator) {
+        // при первом запуске: пароль → имя → склад
+        if (!accessKey) {
+            setTimeout(() => askKey(true), 400);
+        } else if (!operator) {
             setTimeout(() => askOperator(true), 400);
         } else if (!warehouse) {
             setTimeout(() => askWarehouse(true), 400);
