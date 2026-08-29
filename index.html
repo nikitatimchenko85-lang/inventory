@@ -95,24 +95,16 @@
         }
 
         .content {
-            padding: 0 16px;
+            padding: 4px 16px 0;
             max-width: 700px;
             margin: 0 auto;
-        }
-
-        .section-header {
-            font-size: 13px;
-            font-weight: 400;
-            color: var(--ios-gray);
-            text-transform: uppercase;
-            letter-spacing: -0.08px;
-            padding: 24px 16px 7px;
         }
 
         .card {
             background: var(--ios-card);
             border-radius: 10px;
             overflow: hidden;
+            margin-top: 16px;
         }
 
         .row {
@@ -397,6 +389,10 @@
             font-size: 15px;
         }
 
+        #tableSection {
+            margin-top: 28px;
+        }
+
         .footer-note {
             font-size: 13px;
             color: var(--ios-gray);
@@ -568,7 +564,6 @@
 
     <div class="content">
         <form id="inventoryForm">
-            <div class="section-header">Фото</div>
             <div class="card">
                 <div class="photo-area">
                     <div class="photo-strip" id="photoStrip"></div>
@@ -576,7 +571,6 @@
                 </div>
             </div>
 
-            <div class="section-header">Товар</div>
             <div class="card">
                 <div class="row">
                     <label for="name">Наименование</label>
@@ -598,7 +592,6 @@
             </div>
         </form>
 
-        <div id="listHeader" class="section-header" style="display:none;">Список</div>
         <div id="tableSection"></div>
         <div id="counter" class="footer-note"></div>
 
@@ -953,17 +946,14 @@
 
         function renderTable() {
             const section = document.getElementById('tableSection');
-            const listHeader = document.getElementById('listHeader');
             const counter = document.getElementById('counter');
 
             if (items.length === 0) {
-                listHeader.style.display = 'none';
                 counter.textContent = '';
-                section.innerHTML = '<div class="section-header">Список</div><div class="empty">Пока пусто. Добавьте первый товар.</div>';
+                section.innerHTML = '<div class="empty">Пока пусто. Добавьте первый товар.</div>';
                 return;
             }
 
-            listHeader.style.display = 'block';
 
             let html = '<div class="card">';
             items.forEach(item => {
