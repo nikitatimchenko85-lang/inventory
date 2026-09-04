@@ -422,6 +422,30 @@
 
         .clear-btn:active { opacity: 0.5; }
 
+        .page-foot {
+            display: flex;
+            justify-content: flex-end;
+            padding: 26px 16px 0;
+        }
+
+        .help-link {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            color: var(--ios-gray2);
+            text-decoration: none;
+        }
+
+        .help-link svg {
+            width: 21px;
+            height: 21px;
+            display: block;
+        }
+
+        .help-link:active { color: var(--ios-blue); }
+
         /* Камера */
         #cameraModal {
             display: none;
@@ -619,6 +643,16 @@
         <div class="list-footer">
             <span id="counter" class="footer-note"></span>
             <button type="button" class="clear-btn" id="clearBtn" style="display:none;">Очистить список</button>
+        </div>
+
+        <div class="page-foot">
+            <a class="help-link" href="instruction.html" aria-label="Как пользоваться приложением">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9.2" stroke="currentColor" stroke-width="1.5"/>
+                    <circle cx="12" cy="7.9" r="1.15" fill="currentColor"/>
+                    <path d="M12 11v5.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+            </a>
         </div>
 
     </div>
