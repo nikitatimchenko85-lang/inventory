@@ -425,6 +425,7 @@
         .page-foot {
             display: flex;
             justify-content: flex-end;
+            gap: 4px;
             padding: 26px 16px 0;
         }
 
@@ -646,6 +647,12 @@
         </div>
 
         <div class="page-foot">
+            <a class="help-link" id="sheetLink" href="#" target="_blank" rel="noopener" aria-label="Открыть Google Таблицу" style="display:none;">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <rect x="4" y="3.4" width="16" height="17.2" rx="2.2" stroke="currentColor" stroke-width="1.5"/>
+                    <path d="M4 9.2h16M4 14.8h16M10.6 9.2v11.4" stroke="currentColor" stroke-width="1.5"/>
+                </svg>
+            </a>
             <a class="help-link" href="instruction.html" aria-label="Как пользоваться приложением">
                 <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     <circle cx="12" cy="12" r="9.2" stroke="currentColor" stroke-width="1.5"/>
@@ -692,6 +699,9 @@
         let warehouse = '';
         let accessKey = '';
         const MAX_LOCAL_ITEMS = 30;   // сколько последних записей держим в телефоне
+        // ссылка на таблицу для значка внизу экрана; оставьте пустой — значок не появится
+        const SPREADSHEET_URL = '';
+
         const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwZmMCxv7ujqEkE_3N0ODruaKWLt6qVa9MW42p9vo1n2MpREhTjSKfMM3O_5XZlxYx-/exec';
 
         function saveItems() {
@@ -1149,6 +1159,12 @@
 
         document.getElementById('operatorBtn').addEventListener('click', () => askOperator(false));
         document.getElementById('warehouseBtn').addEventListener('click', () => askWarehouse(false));
+
+        if (SPREADSHEET_URL) {
+            const link = document.getElementById('sheetLink');
+            link.href = SPREADSHEET_URL;
+            link.style.display = 'flex';
+        }
 
         loadItems();
         loadKey();
