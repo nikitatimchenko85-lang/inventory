@@ -17,6 +17,25 @@
         --screen: #F2F2F7;
         --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         --serif: Charter, 'Bitstream Charter', 'Iowan Old Style', Georgia, serif;
+        color-scheme: light;
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root {
+            --paper: #000000;
+            --ink: #F2F2F7;
+            --ink-soft: #A0A0A6;
+            --rule: #2C2C2E;
+            --blue: #0A84FF;
+            --red: #FF453A;
+            --grey: #98989F;
+            --grey-fill: #2C2C2E;
+            --screen: #1C1C1E;
+            color-scheme: dark;
+        }
+
+        /* карточки на схемах экранов */
+        .note { background: #1C1C1E; }
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -128,7 +147,7 @@
     .note {
         margin-top: 20px;
         padding: 15px 18px;
-        background: #fff;
+        background: var(--screen);
         border-left: 3px solid var(--blue);
         border-radius: 0 8px 8px 0;
         font-size: 16.5px;
