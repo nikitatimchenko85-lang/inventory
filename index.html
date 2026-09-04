@@ -684,7 +684,7 @@
     </div>
 
     <div class="content">
-        <form id="inventoryForm">
+        <form id="inventoryForm" autocomplete="off" novalidate>
             <div class="card">
                 <div class="photo-area">
                     <div class="photo-strip" id="photoStrip"></div>
@@ -695,16 +695,17 @@
             <div class="card">
                 <div class="row">
                     <label for="itemName">Наименование</label>
-                    <input type="text" id="itemName" placeholder="Обязательно" required
-                           autocomplete="off" autocorrect="off" spellcheck="false">
+                    <input type="text" id="itemName" name="inv-title-field" placeholder="Обязательно" required
+                           autocomplete="new-password" autocorrect="off" autocapitalize="sentences"
+                           spellcheck="false" data-lpignore="true">
                 </div>
                 <div class="row">
                     <label for="quantity">Количество</label>
-                    <input type="number" id="quantity" placeholder="0" min="0" inputmode="numeric" required>
+                    <input type="number" id="quantity" name="inv-qty-field" placeholder="0" min="0" inputmode="numeric" required autocomplete="off">
                 </div>
                 <div class="row stacked">
                     <label for="notes">Примечание</label>
-                    <textarea id="notes" placeholder="Необязательно"></textarea>
+                    <textarea id="notes" name="inv-note-field" placeholder="Необязательно" autocomplete="off" autocorrect="off"></textarea>
                 </div>
             </div>
 
@@ -781,7 +782,7 @@
         let accessKey = '';
         const MAX_LOCAL_ITEMS = 30;   // сколько последних записей держим в телефоне
         // ссылка на таблицу для значка внизу экрана; оставьте пустой — значок не появится
-        const SPREADSHEET_URL = 'https://docs.google.com/spreadsheets/d/1YNFceMcy8vqtnr4vQJKLkU6IMHUwexfIdQ2FD_j4wPk/edit?gid=0#gid=0';
+        const SPREADSHEET_URL = 'https://docs.google.com/spreadsheets/d/1YNFceMcy8vqtnr4vQJKLkU6IMHUwexfIdQ2FD_j4wPk/edit';
 
         const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwZmMCxv7ujqEkE_3N0ODruaKWLt6qVa9MW42p9vo1n2MpREhTjSKfMM3O_5XZlxYx-/exec';
 
