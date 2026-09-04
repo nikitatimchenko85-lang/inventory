@@ -34,12 +34,30 @@
     .wrap { max-width: 660px; margin: 0 auto; }
 
     /* ---------- обложка ---------- */
+    .back {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        margin-top: 22px;
+        font-family: var(--sans);
+        font-size: 15px;
+        color: var(--blue);
+        text-decoration: none;
+    }
+
+    .back:active { opacity: 0.5; }
+
+    .back-bottom {
+        margin-top: 44px;
+        padding-bottom: 4px;
+    }
+
     .cover {
         display: grid;
         grid-template-columns: 1fr auto;
         gap: 34px;
         align-items: center;
-        padding: 58px 0 44px;
+        padding: 26px 0 44px;
         border-bottom: 1px solid var(--rule);
     }
 
@@ -156,7 +174,25 @@
         h1 { font-size: 31px; }
         h2 { font-size: 22px; }
         .cover, .with-shot { grid-template-columns: 1fr; }
-        .cover { gap: 26px; padding-top: 40px; }
+        .back {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        margin-top: 22px;
+        font-family: var(--sans);
+        font-size: 15px;
+        color: var(--blue);
+        text-decoration: none;
+    }
+
+    .back:active { opacity: 0.5; }
+
+    .back-bottom {
+        margin-top: 44px;
+        padding-bottom: 4px;
+    }
+
+    .cover { gap: 26px; padding-top: 40px; }
         .step { grid-template-columns: 1fr; gap: 0; }
         .num { padding-top: 0; margin-bottom: 6px; }
         figcaption { max-width: none; }
@@ -166,11 +202,19 @@
         body { background: #fff; padding: 0; font-size: 12pt; }
         .step { page-break-inside: avoid; border-bottom: 1px solid #ddd; }
         .note { background: #f6f6f6; }
+        .back { display: none; }
     }
 </style>
 </head>
 <body>
 <div class="wrap">
+
+    <a class="back" href="index.html">
+        <svg width="17" height="17" viewBox="0 0 17 17" fill="none" aria-hidden="true">
+            <path d="M11 3L5 8.5l6 5.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Вернуться в приложение
+    </a>
 
     <header class="cover">
         <div>
@@ -373,6 +417,13 @@
             <p>Значит, приложение открыто в Safari, а не с домашнего экрана. Добавьте значок по шагу 1 и запускайте с него.</p>
         </div>
     </section>
+
+    <a class="back back-bottom" href="index.html">
+        <svg width="17" height="17" viewBox="0 0 17 17" fill="none" aria-hidden="true">
+            <path d="M11 3L5 8.5l6 5.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Вернуться в приложение
+    </a>
 
     <footer>
         Инструкция к приложению «Инвентаризация». Вопросы — ответственному за таблицу.
