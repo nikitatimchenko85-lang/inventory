@@ -259,27 +259,8 @@
             display: flex;
             gap: 10px;
             margin-top: 20px;
+            scroll-margin-bottom: 24px;
         }
-
-        /* при открытой клавиатуре кнопка встаёт прямо над ней */
-        body.kb-open .btn-row {
-            position: fixed;
-            left: 0;
-            right: 0;
-            bottom: calc(var(--kb, 0px) + 8px);
-            max-width: 700px;
-            margin: 0 auto;
-            padding: 0 16px;
-            z-index: 60;
-        }
-
-        /* место, которое кнопка освободила, чтобы список не прыгал */
-        body.kb-open .btn-row-space {
-            display: block;
-            height: 54px;
-        }
-
-        .btn-row-space { display: none; }
 
         /* Фото */
         .photo-area {
@@ -697,11 +678,11 @@
                     <label for="itemName">Наименование</label>
                     <input type="text" id="itemName" name="inv-title-field" placeholder="Обязательно" required
                            autocomplete="new-password" autocorrect="off" autocapitalize="sentences"
-                           spellcheck="false" data-lpignore="true">
+                           spellcheck="false" data-lpignore="true" enterkeyhint="next">
                 </div>
                 <div class="row">
                     <label for="quantity">Количество</label>
-                    <input type="number" id="quantity" name="inv-qty-field" placeholder="0" min="0" inputmode="numeric" required autocomplete="off">
+                    <input type="number" id="quantity" name="inv-qty-field" placeholder="0" min="0" inputmode="numeric" required autocomplete="off" enterkeyhint="done">
                 </div>
                 <div class="row stacked">
                     <label for="notes">Примечание</label>
@@ -713,7 +694,6 @@
                 <button type="submit" class="btn btn-filled" id="submitBtn">Добавить</button>
                 <button type="button" class="btn btn-tinted" id="cancelBtn" style="display:none;">Отмена</button>
             </div>
-            <div class="btn-row-space"></div>
         </form>
 
         <div id="tableSection"></div>
@@ -1002,6 +982,34 @@
             renderTable();
         });
 
+        // Enter на клавиатуре ведёт по форме и в конце добавляет запись,
+        // чтобы не тянуться к кнопке из-под клавиатуры
+        document.getElementById('itemName').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('quantity').focus();
+            }
+        });
+
+        document.getElementById('quantity').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.activeElement.blur();
+                document.getElementById('inventoryForm')
+                        .dispatchEvent(new Event('submit', { cancelable: true }));
+            }
+        });
+
+        // как только клавиатура открылась, подтягиваем кнопку в поле зрения
+        ['itemName', 'quantity', 'notes'].forEach(id => {
+            document.getElementById(id).addEventListener('focus', () => {
+                setTimeout(() => {
+                    document.querySelector('.btn-row')
+                            .scrollIntoView({ block: 'end', behavior: 'smooth' });
+                }, 320);
+            });
+        });
+
         function resetForm() {
             document.getElementById('inventoryForm').reset();
             photoData = '';
@@ -1241,22 +1249,6 @@
 
         document.getElementById('operatorBtn').addEventListener('click', () => askOperator(false));
         document.getElementById('warehouseBtn').addEventListener('click', () => askWarehouse(false));
-
-        // высота клавиатуры: нужна, чтобы поднять над ней кнопку «Добавить»
-        (function trackKeyboard() {
-            const vv = window.visualViewport;
-            if (!vv) return;
-
-            function update() {
-                const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-                document.documentElement.style.setProperty('--kb', kb + 'px');
-                document.body.classList.toggle('kb-open', kb > 90);
-            }
-
-            vv.addEventListener('resize', update);
-            vv.addEventListener('scroll', update);
-            update();
-        })();
 
         // тема: по умолчанию системная, выбор запоминается
         function applyTheme(mode) {
