@@ -558,6 +558,22 @@
             font-family:ui-monospace, monospace; font-size:13px; color:var(--ios-label);
         }
 
+        .wh-input {
+            flex:1; min-width:0; border:none; outline:none; background:transparent;
+            font-family:inherit; font-size:16px; color:var(--ios-label); padding:0;
+        }
+        .wh-create {
+            flex:0 0 auto; margin-left:12px; padding:8px 14px; border:none;
+            border-radius:9px; background:var(--ios-blue); color:#fff;
+            font-family:inherit; font-size:14px; font-weight:600; cursor:pointer;
+        }
+        .wh-create:active { opacity:.6; }
+        .wh-create:disabled { background:var(--ios-gray3); color:var(--ios-gray); }
+
+        .wh-row .k { flex:1; }
+        .wh-row .tick { flex:0 0 auto; color:var(--ios-blue); font-size:17px; font-weight:600; }
+        .wh-empty { padding:26px 14px; text-align:center; color:var(--ios-gray); font-size:15px; }
+
         .switch {
             position:relative; flex:0 0 auto; width:51px; height:31px; border:none;
             border-radius:16px; background:var(--ios-gray3); cursor:pointer;
@@ -835,6 +851,38 @@
     </div>
 
 
+<!-- выбор склада -->
+<div class="sheet" id="whSheet">
+    <div class="sheet-nav">
+        <button type="button" id="closeWh">Отмена</button>
+        <span class="title">Склад</span>
+        <span style="width:56px;"></span>
+    </div>
+    <div class="sheet-body">
+
+        <div class="set-group">
+            <div class="set-title">Новый склад</div>
+            <div class="set-card">
+                <div class="set-row">
+                    <input type="text" id="whNew" name="wh-new" class="wh-input"
+                           placeholder="Название нового склада"
+                           autocomplete="off" autocorrect="off" spellcheck="false"
+                           enterkeyhint="done">
+                    <button type="button" class="wh-create" id="whCreate">Создать</button>
+                </div>
+            </div>
+            <div class="set-note">Новый склад — это новый лист в таблице. Если склад уже есть в списке ниже, выберите его.</div>
+        </div>
+
+        <div class="set-group">
+            <div class="set-title">Уже в таблице</div>
+            <div class="set-card" id="whList"></div>
+            <div class="set-note" id="whHint"></div>
+        </div>
+
+    </div>
+</div>
+
 <!-- настройки -->
 <div class="sheet" id="settings">
     <div class="sheet-nav">
@@ -1006,7 +1054,8 @@
             reqCond: false,
             reqWork: false,
             maxLocal: 30,
-            theme: 'dark'
+            theme: 'dark',
+            role: ''
         };
 
         const PHOTO_PRESETS = {
@@ -1562,6 +1611,7 @@
                     body: JSON.stringify({ action: 'ping', key: accessKey })
                 });
                 const r = await res.json();
+                if (r.role) { CFG.role = r.role; cfgSave(); }
                 if (r.status === 'success' && Array.isArray(r.sheets)) {
                     warehouses = r.sheets;
                     localStorage.setItem('inventoryWarehouses', JSON.stringify(warehouses));
@@ -1602,26 +1652,75 @@
             applyWarehouse(clean);
         }
 
+        /* ---------- экран выбора склада ---------- */
+        let whForce = false;
+
         async function askWarehouse(force) {
-            await fetchWarehouses();   // подтягиваем свежий список листов
+            whForce = !!force;
+            document.getElementById('whNew').value = '';
+            paintWhList();
+            document.getElementById('whHint').textContent = 'Обновляю список…';
+            document.getElementById('whSheet').classList.add('open');
+            document.body.style.overflow = 'hidden';
 
-            if (!warehouses.length) { newWarehouse(force); return; }
+            const ok = await fetchWarehouses();
+            paintWhList();
+            document.getElementById('whHint').textContent = ok
+                ? 'Список взят из листов таблицы.'
+                : 'Нет связи — показан список с прошлого раза.';
+        }
 
-            const list = warehouses
-                .map((w, i) => (i + 1) + '. ' + w + (w === warehouse ? ' ✓' : ''))
-                .join('\n');
-            const v = prompt('Склад — выберите из существующих:\n' + list + '\n\n0. Создать новый', '');
-
-            if (v === null) {
-                if (force) setTimeout(() => askWarehouse(true), 150);
+        function paintWhList() {
+            const box = document.getElementById('whList');
+            if (!warehouses.length) {
+                box.innerHTML = '<div class="wh-empty">Складов пока нет.<br>Создайте первый выше.</div>';
                 return;
             }
-            const i = parseInt(v.trim(), 10);
-            if (i === 0) { newWarehouse(force); return; }
-            if (i >= 1 && i <= warehouses.length) { applyWarehouse(warehouses[i - 1]); return; }
+            box.innerHTML = warehouses.map((w, i) =>
+                '<button type="button" class="set-row wh-row" data-i="' + i + '">' +
+                '<span class="k">' + escapeHtml(w) + '</span>' +
+                (w === warehouse ? '<span class="tick">✓</span>' : '<span class="chev">›</span>') +
+                '</button>'
+            ).join('');
 
-            alert('Введите номер из списка.');
-            setTimeout(() => askWarehouse(force), 150);
+            box.querySelectorAll('.wh-row').forEach(b => b.addEventListener('click', () => {
+                applyWarehouse(warehouses[Number(b.dataset.i)]);
+                closeWh(true);
+            }));
+        }
+
+        function closeWh(chosen) {
+            if (!chosen && whForce && !warehouse) {
+                alert('Склад нужно выбрать — без него запись некуда отправлять.');
+                return;
+            }
+            document.getElementById('whSheet').classList.remove('open');
+            document.body.style.overflow = '';
+            whForce = false;
+        }
+
+        document.getElementById('closeWh').addEventListener('click', () => closeWh(false));
+
+        document.getElementById('whCreate').addEventListener('click', createWarehouse);
+        document.getElementById('whNew').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); createWarehouse(); }
+        });
+
+        function createWarehouse() {
+            const clean = document.getElementById('whNew').value.trim();
+            if (!clean) { feedbackBad(); alert('Впишите название склада'); return; }
+
+            // защита от почти одинаковых названий
+            const same = warehouses.find(w => w.toLowerCase().trim() === clean.toLowerCase());
+            if (same) {
+                alert('Такой склад уже есть: «' + same + '».\nВыбран он, новый лист не создан.');
+                applyWarehouse(same);
+                closeWh(true);
+                return;
+            }
+
+            applyWarehouse(clean);
+            closeWh(true);
         }
 
         function askOperator(force) {
@@ -1652,7 +1751,35 @@
 
         /* ======================= настройки ======================= */
 
-        function openSettings() {
+        async function requireAdmin() {
+            if (CFG.role === 'admin') return true;
+
+            const p = prompt('Настройки доступны ответственному.\nВведите пароль администратора:', '');
+            const clean = p === null ? '' : p.trim();
+            if (!clean) return false;
+
+            if (!CFG.url) { alert('Не указана ссылка на скрипт.'); return false; }
+
+            try {
+                const res = await fetch(CFG.url, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'ping', key: clean })
+                });
+                const r = await res.json();
+                if (r.status === 'success' && r.role === 'admin') {
+                    CFG.role = 'admin';
+                    cfgSave();
+                    return true;
+                }
+                alert('Пароль не подошёл.');
+            } catch (e) {
+                alert('Нет связи — проверить пароль не удалось.');
+            }
+            return false;
+        }
+
+        async function openSettings() {
+            if (!(await requireAdmin())) return;
             paintSettings();
             document.getElementById('settings').classList.add('open');
             document.body.style.overflow = 'hidden';
