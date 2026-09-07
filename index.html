@@ -1055,7 +1055,8 @@
             reqWork: false,
             maxLocal: 30,
             theme: 'dark',
-            role: ''
+            role: '',
+            v: 2
         };
 
         const PHOTO_PRESETS = {
@@ -1097,6 +1098,13 @@
         }
 
         let CFG = cfgLoad();
+
+        // разовый перенос: у кого осталось «как в системе» с прошлой версии — ставим тёмную
+        if (CFG.v !== 2) {
+            if (!CFG.theme) CFG.theme = 'dark';
+            CFG.v = 2;
+            cfgSave();
+        }
         // ссылка на таблицу для значка внизу экрана; оставьте пустой — значок не появится
 
 
