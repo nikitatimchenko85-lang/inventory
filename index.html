@@ -210,6 +210,37 @@
             color: var(--ios-gray);
         }
 
+        .segmented {
+            display: flex;
+            gap: 6px;
+            background: var(--ios-gray3);
+            border-radius: 9px;
+            padding: 3px;
+        }
+
+        .segmented button {
+            flex: 1;
+            min-width: 0;
+            padding: 9px 4px;
+            border: none;
+            border-radius: 7px;
+            background: transparent;
+            font-family: inherit;
+            font-size: 13px;
+            line-height: 1.2;
+            color: var(--ios-label2);
+            cursor: pointer;
+        }
+
+        .segmented button.on {
+            background: var(--ios-card);
+            color: var(--ios-label);
+            font-weight: 600;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.14);
+        }
+
+        .segmented button:active { opacity: 0.6; }
+
         input::placeholder,
         textarea::placeholder {
             color: var(--ios-gray2);
@@ -685,6 +716,22 @@
                     <input type="number" id="quantity" name="inv-qty-field" placeholder="0" min="0" inputmode="numeric" required autocomplete="off" enterkeyhint="done">
                 </div>
                 <div class="row stacked">
+                    <label>Состояние</label>
+                    <div class="segmented" id="conditionGroup" role="group">
+                        <button type="button" data-value="Хорошее">Хорошее</button>
+                        <button type="button" data-value="Есть дефекты">Есть дефекты</button>
+                        <button type="button" data-value="Под списание">Под списание</button>
+                    </div>
+                </div>
+                <div class="row stacked">
+                    <label>Работоспособность</label>
+                    <div class="segmented" id="workingGroup" role="group">
+                        <button type="button" data-value="Проверено">Проверено</button>
+                        <button type="button" data-value="Не работает">Не работает</button>
+                        <button type="button" data-value="Невозможно проверить">Не проверить</button>
+                    </div>
+                </div>
+                <div class="row stacked">
                     <label for="notes">Примечание</label>
                     <textarea id="notes" name="inv-note-field" placeholder="Необязательно" autocomplete="off" autocorrect="off"></textarea>
                 </div>
@@ -764,7 +811,7 @@
         // ссылка на таблицу для значка внизу экрана; оставьте пустой — значок не появится
         const SPREADSHEET_URL = 'https://docs.google.com/spreadsheets/d/1YNFceMcy8vqtnr4vQJKLkU6IMHUwexfIdQ2FD_j4wPk/edit';
 
-        const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwZmMCxv7ujqEkE_3N0ODruaKWLt6qVa9MW42p9vo1n2MpREhTjSKfMM3O_5XZlxYx-/exec';
+        const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbyAKNTNFY5Z7PsR1XjmPa0kz1bWyaDrIEa-det-_d9CERtxwsr8AVa69JmeKrhQz454/exec';
 
         function saveItems() {
             try {
@@ -956,7 +1003,9 @@
                 name,
                 quantity: parseInt(quantity),
                 warehouse,
-                notes
+                notes,
+                condition: segmentedValue('conditionGroup'),
+                working: segmentedValue('workingGroup')
             };
 
             const forUpload = Object.assign({}, item, {
@@ -981,6 +1030,32 @@
             resetForm();
             renderTable();
         });
+
+        // переключатели «Состояние» и «Работоспособность»: можно снять выбор повторным нажатием
+        function setupSegmented(groupId) {
+            const group = document.getElementById(groupId);
+            group.addEventListener('click', (e) => {
+                const btn = e.target.closest('button');
+                if (!btn) return;
+                const was = btn.classList.contains('on');
+                group.querySelectorAll('button').forEach(b => b.classList.remove('on'));
+                if (!was) btn.classList.add('on');
+            });
+        }
+
+        setupSegmented('conditionGroup');
+        setupSegmented('workingGroup');
+
+        function segmentedValue(groupId) {
+            const on = document.querySelector('#' + groupId + ' button.on');
+            return on ? on.dataset.value : '';
+        }
+
+        function setSegmented(groupId, value) {
+            document.querySelectorAll('#' + groupId + ' button').forEach(b => {
+                b.classList.toggle('on', b.dataset.value === value);
+            });
+        }
 
         // Enter на клавиатуре ведёт по форме и в конце добавляет запись,
         // чтобы не тянуться к кнопке из-под клавиатуры
@@ -1012,6 +1087,8 @@
 
         function resetForm() {
             document.getElementById('inventoryForm').reset();
+            setSegmented('conditionGroup', '');
+            setSegmented('workingGroup', '');
             photoData = '';
             photoData2 = '';
             photosDirty = false;
@@ -1032,6 +1109,8 @@
             document.getElementById('itemName').value = item.name;
             document.getElementById('quantity').value = item.quantity;
             document.getElementById('notes').value = item.notes;
+            setSegmented('conditionGroup', item.condition || '');
+            setSegmented('workingGroup', item.working || '');
             photoData = item.photo || '';
             photoData2 = item.photo2 || '';
             photosDirty = false;
@@ -1083,12 +1162,15 @@
                 const data = {
                     action: isEdit ? 'update' : 'add',
                     key: accessKey,
+                    sheet: item.warehouse,
                     id: String(item.id),
                     operator: operator,
                     name: item.name,
                     quantity: item.quantity,
                     warehouse: item.warehouse,
                     notes: item.notes,
+                    condition: item.condition || '',
+                    working: item.working || '',
                     photo: photo,
                     photo2: photo2
                 };
@@ -1108,7 +1190,8 @@
         function sendDeleteToGoogleSheets(item) {
             fetch(GOOGLE_SHEETS_URL, {
                 method: 'POST',
-                body: JSON.stringify({ action: 'delete', key: accessKey, id: String(item.id), name: item.name })
+                body: JSON.stringify({ action: 'delete', key: accessKey, sheet: item.warehouse,
+                                       id: String(item.id), name: item.name })
             })
                 .then(r => r.json())
                 .then(res => { if (res.code === 'auth') keyRejected(); })
@@ -1143,7 +1226,7 @@
                     </svg>
                 </div>`;
 
-                const meta = [item.quantity + ' шт', item.warehouse, item.notes].filter(Boolean).join(' · ');
+                const meta = [item.quantity + ' шт', item.warehouse, item.condition, item.working, item.notes].filter(Boolean).join(' · ');
 
                 html += `<div class="item-row">
                     <div class="item-photos">${photos}</div>
