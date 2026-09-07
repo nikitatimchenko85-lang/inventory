@@ -497,6 +497,79 @@
 
         .clear-btn:active { opacity: 0.5; }
 
+        /* настройки */
+        .sheet {
+            display:none; position:fixed; inset:0; z-index:200;
+            background:var(--ios-bg); overflow-y:auto; -webkit-overflow-scrolling:touch;
+        }
+        .sheet.open { display:block; }
+        .sheet-nav {
+            position:sticky; top:0; z-index:10; display:flex; align-items:center;
+            justify-content:space-between; gap:12px; padding:12px 16px;
+            padding-top:calc(12px + env(safe-area-inset-top,0px));
+            background:var(--nav-bg);
+            backdrop-filter:saturate(180%) blur(20px);
+            -webkit-backdrop-filter:saturate(180%) blur(20px);
+            border-bottom:.5px solid var(--ios-separator);
+        }
+        .sheet-nav button {
+            border:none; background:none; font-family:inherit; font-size:17px;
+            color:var(--ios-blue); cursor:pointer; padding:4px 0; font-weight:600;
+        }
+        .sheet-nav .title { flex:1; text-align:center; font-size:16px; font-weight:600; }
+        .sheet-body { padding:16px 16px 60px; max-width:700px; margin:0 auto; }
+
+        .set-group { margin-top:22px; }
+        .set-group:first-child { margin-top:4px; }
+        .set-title {
+            font-size:12px; font-weight:600; letter-spacing:.6px; text-transform:uppercase;
+            color:var(--ios-gray); padding:0 4px 8px;
+        }
+        .set-note { font-size:13px; color:var(--ios-gray); padding:8px 4px 0; line-height:1.45; }
+        .set-card { background:var(--ios-card); border-radius:10px; overflow:hidden; }
+
+        .set-row {
+            display:flex; align-items:center; gap:12px; padding:12px 14px;
+            position:relative; min-height:48px;
+        }
+        .set-row + .set-row::before {
+            content:''; position:absolute; top:0; left:14px; right:0;
+            height:.5px; background:var(--ios-separator);
+        }
+        .set-row .k { flex:0 0 auto; font-size:15px; color:var(--ios-label); }
+        .set-row .v {
+            flex:1; min-width:0; text-align:right; font-size:15px; color:var(--ios-gray);
+            white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+        }
+        button.set-row {
+            width:100%; border:none; background:none; font-family:inherit;
+            text-align:left; cursor:pointer;
+        }
+        button.set-row:active { background:var(--chip-bg); }
+        .set-row.danger .k { color:var(--ios-red); }
+        .set-row .chev { flex:0 0 auto; color:var(--ios-gray2); font-size:17px; }
+
+        .set-row.stacked { flex-direction:column; align-items:stretch; gap:8px; }
+        .set-row.stacked .k { font-size:13px; color:var(--ios-gray); }
+        .set-row input.url {
+            width:100%; border:none; outline:none; background:var(--chip-bg);
+            border-radius:9px; padding:11px 12px;
+            font-family:ui-monospace, monospace; font-size:13px; color:var(--ios-label);
+        }
+
+        .switch {
+            position:relative; flex:0 0 auto; width:51px; height:31px; border:none;
+            border-radius:16px; background:var(--ios-gray3); cursor:pointer;
+            padding:0; transition:background .2s;
+        }
+        .switch.on { background:var(--ios-green); }
+        .switch::after {
+            content:''; position:absolute; top:2px; left:2px; width:27px; height:27px;
+            border-radius:50%; background:#fff;
+            box-shadow:0 1px 3px rgba(0,0,0,.3); transition:transform .2s;
+        }
+        .switch.on::after { transform:translateX(20px); }
+
         .page-foot {
             display: flex;
             justify-content: flex-end;
@@ -750,6 +823,12 @@
         </div>
 
         <div class="page-foot">
+            <button type="button" class="help-link" id="settingsBtn" aria-label="Настройки">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="1.5"/>
+                    <path d="M12 3.6v2.2M12 18.2v2.2M20.4 12h-2.2M5.8 12H3.6M18 6l-1.6 1.6M7.6 16.4 6 18M18 18l-1.6-1.6M7.6 7.6 6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+            </button>
             <button type="button" class="help-link" id="themeBtn" aria-label="Сменить тему">
                 <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     <path d="M20.2 14.6A8.4 8.4 0 1 1 9.4 3.8a6.6 6.6 0 0 0 10.8 10.8Z"
@@ -772,6 +851,103 @@
         </div>
 
     </div>
+
+
+<!-- настройки -->
+<div class="sheet" id="settings">
+    <div class="sheet-nav">
+        <button type="button" id="closeSettings">Готово</button>
+        <span class="title">Настройки</span>
+        <span style="width:56px;"></span>
+    </div>
+    <div class="sheet-body">
+
+        <div class="set-group">
+            <div class="set-title">Подключение</div>
+            <div class="set-card">
+                <div class="set-row stacked">
+                    <span class="k">Ссылка Apps Script</span>
+                    <input type="text" class="url" id="cfgUrl" name="cfg-url"
+                           placeholder="https://script.google.com/macros/s/.../exec"
+                           autocomplete="off" autocorrect="off" spellcheck="false">
+                </div>
+                <div class="set-row stacked">
+                    <span class="k">Ссылка на таблицу</span>
+                    <input type="text" class="url" id="cfgSheetUrl" name="cfg-sheet"
+                           placeholder="https://docs.google.com/spreadsheets/..."
+                           autocomplete="off" autocorrect="off" spellcheck="false">
+                </div>
+                <button type="button" class="set-row" id="cfgPassword">
+                    <span class="k">Пароль</span><span class="v" id="cfgPasswordV"></span><span class="chev">›</span>
+                </button>
+                <button type="button" class="set-row" id="cfgTest">
+                    <span class="k" style="color:var(--ios-blue);">Проверить связь</span>
+                </button>
+            </div>
+            <div class="set-note">После нового развёртывания скрипта вставьте сюда свежую ссылку — переустанавливать приложение не нужно.</div>
+        </div>
+
+        <div class="set-group">
+            <div class="set-title">Оператор</div>
+            <div class="set-card">
+                <button type="button" class="set-row" id="cfgOperator">
+                    <span class="k">Имя</span><span class="v" id="cfgOperatorV"></span><span class="chev">›</span>
+                </button>
+                <button type="button" class="set-row" id="cfgWarehouse">
+                    <span class="k">Склад</span><span class="v" id="cfgWarehouseV"></span><span class="chev">›</span>
+                </button>
+            </div>
+            <div class="set-note">Каждый склад — отдельный лист в таблице. Лист создаётся сам при первой записи.</div>
+        </div>
+
+        <div class="set-group">
+            <div class="set-title">Вид</div>
+            <div class="set-card">
+                <button type="button" class="set-row" id="cfgTheme">
+                    <span class="k">Тема</span><span class="v" id="cfgThemeV"></span><span class="chev">›</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="set-group">
+            <div class="set-title">Заполнение</div>
+            <div class="set-card">
+                <div class="set-row">
+                    <span class="k">Требовать состояние</span><span class="v"></span>
+                    <button type="button" class="switch" id="cfgReqCond" aria-label="Требовать состояние"></button>
+                </div>
+                <div class="set-row">
+                    <span class="k">Требовать работоспособность</span><span class="v"></span>
+                    <button type="button" class="switch" id="cfgReqWork" aria-label="Требовать работоспособность"></button>
+                </div>
+                <button type="button" class="set-row" id="cfgFeedback">
+                    <span class="k">Отклик при сохранении</span><span class="v" id="cfgFeedbackV"></span><span class="chev">›</span>
+                </button>
+                <button type="button" class="set-row" id="cfgPhoto">
+                    <span class="k">Качество фото</span><span class="v" id="cfgPhotoV"></span><span class="chev">›</span>
+                </button>
+                <button type="button" class="set-row" id="cfgMaxLocal">
+                    <span class="k">Записей в списке</span><span class="v" id="cfgMaxLocalV"></span><span class="chev">›</span>
+                </button>
+            </div>
+            <div class="set-note">Экономное фото — около 60 КБ, максимум — до 400 КБ. На слабой связи меньше значит быстрее.</div>
+        </div>
+
+        <div class="set-group">
+            <div class="set-title">Сброс</div>
+            <div class="set-card">
+                <button type="button" class="set-row danger" id="cfgClearList">
+                    <span class="k">Очистить список на телефоне</span>
+                </button>
+                <button type="button" class="set-row danger" id="cfgDropAll">
+                    <span class="k">Полный сброс приложения</span>
+                </button>
+            </div>
+            <div class="set-note">Сброс затрагивает только этот телефон. В таблице всё отправленное остаётся.</div>
+        </div>
+
+    </div>
+</div>
 
     <div id="cameraModal">
         <video id="video" playsinline muted></video>
@@ -807,11 +983,60 @@
         let photosDirty = false;
         let warehouse = '';
         let accessKey = '';
-        const MAX_LOCAL_ITEMS = 30;   // сколько последних записей держим в телефоне
-        // ссылка на таблицу для значка внизу экрана; оставьте пустой — значок не появится
-        const SPREADSHEET_URL = 'https://docs.google.com/spreadsheets/d/1YNFceMcy8vqtnr4vQJKLkU6IMHUwexfIdQ2FD_j4wPk/edit';
 
-        const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbyAKNTNFY5Z7PsR1XjmPa0kz1bWyaDrIEa-det-_d9CERtxwsr8AVa69JmeKrhQz454/exec';
+        /* ---------- настройки ---------- */
+        const CFG_DEFAULT = {
+            url: 'https://script.google.com/macros/s/AKfycbyAKNTNFY5Z7PsR1XjmPa0kz1bWyaDrIEa-det-_d9CERtxwsr8AVa69JmeKrhQz454/exec',
+            sheetUrl: 'https://docs.google.com/spreadsheets/d/1YNFceMcy8vqtnr4vQJKLkU6IMHUwexfIdQ2FD_j4wPk/edit',
+            photo: 'normal',
+            feedback: 'both',
+            reqCond: false,
+            reqWork: false,
+            maxLocal: 30,
+            theme: ''
+        };
+
+        const PHOTO_PRESETS = {
+            eco:    { max: 720,  q: 0.60, label: 'Экономно' },
+            normal: { max: 1080, q: 0.80, label: 'Обычное' },
+            high:   { max: 1440, q: 0.88, label: 'Максимум' }
+        };
+        const FEEDBACK_LABELS = { off: 'Выключен', vibro: 'Вибрация', sound: 'Звук', both: 'Звук и вибрация' };
+
+        function cfgLoad() {
+            try {
+                const v = localStorage.getItem('invConfig');
+                return Object.assign({}, CFG_DEFAULT, v ? JSON.parse(v) : {});
+            } catch (e) { return Object.assign({}, CFG_DEFAULT); }
+        }
+        let audioCtx = null;
+        function beep(ok) {
+            if (CFG.feedback !== 'sound' && CFG.feedback !== 'both') return;
+            try {
+                audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+                const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+                o.connect(g); g.connect(audioCtx.destination);
+                o.frequency.value = ok ? 880 : 320;
+                g.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.22, audioCtx.currentTime + 0.01);
+                g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.16);
+                o.start(); o.stop(audioCtx.currentTime + 0.17);
+            } catch (e) {}
+        }
+        function buzz(p) {
+            if (CFG.feedback !== 'vibro' && CFG.feedback !== 'both') return;
+            if (navigator.vibrate) navigator.vibrate(p);
+        }
+        function feedbackOk()  { beep(true);  buzz(30); }
+        function feedbackBad() { beep(false); buzz([40, 60, 40]); }
+
+        function cfgSave() {
+            try { localStorage.setItem('invConfig', JSON.stringify(CFG)); } catch (e) {}
+        }
+
+        let CFG = cfgLoad();
+        // ссылка на таблицу для значка внизу экрана; оставьте пустой — значок не появится
+
 
         function saveItems() {
             try {
@@ -833,7 +1058,7 @@
         function loadItems() {
             const saved = localStorage.getItem('inventoryItems');
             items = saved ? JSON.parse(saved) : [];
-            if (items.length > MAX_LOCAL_ITEMS) items = items.slice(-MAX_LOCAL_ITEMS);
+            if (items.length > CFG.maxLocal) items = items.slice(-CFG.maxLocal);
         }
 
         /* ---------- Камера ---------- */
@@ -971,6 +1196,7 @@
             const notes = document.getElementById('notes').value.trim();
 
             if (!name || !quantity) {
+                feedbackBad();
                 alert('Заполните наименование и количество');
                 return;
             }
@@ -990,6 +1216,13 @@
                 alert('Сначала укажите склад вверху экрана');
                 askWarehouse(true);
                 return;
+            }
+
+            if (CFG.reqCond && !segmentedValue('conditionGroup')) {
+                feedbackBad(); alert('Выберите состояние'); return;
+            }
+            if (CFG.reqWork && !segmentedValue('workingGroup')) {
+                feedbackBad(); alert('Выберите работоспособность'); return;
             }
 
             // на Google Диск уходит полный кадр, в памяти телефона остаётся миниатюра
@@ -1022,13 +1255,14 @@
             } else {
                 items.push(item);
                 // в таблице записи остаются навсегда, в телефоне — только последние
-                if (items.length > MAX_LOCAL_ITEMS) items = items.slice(-MAX_LOCAL_ITEMS);
+                if (items.length > CFG.maxLocal) items = items.slice(-CFG.maxLocal);
                 await sendToGoogleSheets(Object.assign({}, item, { photo: fullPhoto, photo2: fullPhoto2 }));
             }
 
             saveItems();
             resetForm();
             renderTable();
+            feedbackOk();
         });
 
         // переключатели «Состояние» и «Работоспособность»: можно снять выбор повторным нажатием
@@ -1133,7 +1367,10 @@
 
         /* ---------- Google Sheets ---------- */
 
-        function compressPhoto(base64Str, maxSide = 1080, quality = 0.8) {
+        function compressPhoto(base64Str, maxSide, quality) {
+            const preset = PHOTO_PRESETS[CFG.photo] || PHOTO_PRESETS.normal;
+            maxSide = maxSide || preset.max;
+            quality = quality || preset.q;
             return new Promise((resolve) => {
                 if (!base64Str) { resolve(''); return; }
                 const img = new Image();
@@ -1175,7 +1412,7 @@
                     photo2: photo2
                 };
 
-                fetch(GOOGLE_SHEETS_URL, { method: 'POST', body: JSON.stringify(data) })
+                fetch(CFG.url, { method: 'POST', body: JSON.stringify(data) })
                     .then(r => r.json())
                     .then(res => {
                         if (res.code === 'auth') keyRejected();
@@ -1188,7 +1425,7 @@
         }
 
         function sendDeleteToGoogleSheets(item) {
-            fetch(GOOGLE_SHEETS_URL, {
+            fetch(CFG.url, {
                 method: 'POST',
                 body: JSON.stringify({ action: 'delete', key: accessKey, sheet: item.warehouse,
                                        id: String(item.id), name: item.name })
@@ -1253,7 +1490,7 @@
             html += '</div>';
 
             section.innerHTML = html;
-            counter.textContent = 'В приложении: ' + items.length + ' из последних ' + MAX_LOCAL_ITEMS;
+            counter.textContent = 'В приложении: ' + items.length + ' из последних ' + CFG.maxLocal;
             clearBtn.style.display = 'block';
         }
 
@@ -1334,30 +1571,161 @@
         document.getElementById('warehouseBtn').addEventListener('click', () => askWarehouse(false));
 
         // тема: по умолчанию системная, выбор запоминается
+
+        /* ======================= настройки ======================= */
+        const THEME_LABELS = { '': 'Как в системе', light: 'Светлая', dark: 'Тёмная' };
+
+        function openSettings() {
+            paintSettings();
+            document.getElementById('settings').classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeSettings() {
+            document.getElementById('settings').classList.remove('open');
+            document.body.style.overflow = '';
+        }
+        document.getElementById('settingsBtn').addEventListener('click', openSettings);
+        document.getElementById('closeSettings').addEventListener('click', closeSettings);
+
+        function paintSettings() {
+            document.getElementById('cfgUrl').value = CFG.url || '';
+            document.getElementById('cfgSheetUrl').value = CFG.sheetUrl || '';
+            document.getElementById('cfgPasswordV').textContent = accessKey ? 'задан' : 'не задан';
+
+            document.getElementById('cfgOperatorV').textContent = operator || 'не задано';
+            document.getElementById('cfgWarehouseV').textContent = warehouse || 'не задан';
+
+            document.getElementById('cfgThemeV').textContent = THEME_LABELS[CFG.theme || ''];
+            document.getElementById('cfgReqCond').classList.toggle('on', !!CFG.reqCond);
+            document.getElementById('cfgReqWork').classList.toggle('on', !!CFG.reqWork);
+            document.getElementById('cfgFeedbackV').textContent = FEEDBACK_LABELS[CFG.feedback];
+            document.getElementById('cfgPhotoV').textContent =
+                (PHOTO_PRESETS[CFG.photo] || PHOTO_PRESETS.normal).label;
+            document.getElementById('cfgMaxLocalV').textContent = CFG.maxLocal;
+        }
+
+        /* --- подключение --- */
+        document.getElementById('cfgUrl').addEventListener('change', (e) => {
+            CFG.url = e.target.value.trim(); cfgSave();
+        });
+        document.getElementById('cfgSheetUrl').addEventListener('change', (e) => {
+            CFG.sheetUrl = e.target.value.trim(); cfgSave(); paintSheetLink();
+        });
+        document.getElementById('cfgPassword').addEventListener('click', () => {
+            askKey(false);
+            setTimeout(paintSettings, 100);
+        });
+
+        document.getElementById('cfgTest').addEventListener('click', async () => {
+            if (!CFG.url) { alert('Сначала вставьте ссылку Apps Script'); return; }
+            try {
+                const res = await fetch(CFG.url, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'ping', key: accessKey })
+                });
+                const r = await res.json();
+                if (r.code === 'auth') { alert('Связь есть, но пароль не подошёл.'); return; }
+                if (r.status === 'success') {
+                    alert('Связь работает.' + (r.sheets ? '\nЛисты: ' + r.sheets.join(', ') : ''));
+                } else {
+                    alert('Скрипт ответил ошибкой:\n' + (r.message || ''));
+                }
+            } catch (e) {
+                alert('Не удалось связаться со скриптом.\nПроверьте ссылку и интернет.');
+            }
+        });
+
+        /* --- оператор --- */
+        document.getElementById('cfgOperator').addEventListener('click', () => {
+            askOperator(false); setTimeout(paintSettings, 100);
+        });
+        document.getElementById('cfgWarehouse').addEventListener('click', () => {
+            askWarehouse(false); setTimeout(paintSettings, 100);
+        });
+
+        /* --- вид --- */
+        document.getElementById('cfgTheme').addEventListener('click', () => {
+            const v = prompt('Тема:\n1. Как в системе\n2. Светлая\n3. Тёмная', '');
+            const map = { '1': '', '2': 'light', '3': 'dark' };
+            if (v !== null && map[v.trim()] !== undefined) {
+                CFG.theme = map[v.trim()];
+                cfgSave();
+                applyTheme(CFG.theme);
+                paintSettings();
+            }
+        });
+
+        /* --- заполнение --- */
+        function toggleCfg(id, field) {
+            document.getElementById(id).addEventListener('click', () => {
+                CFG[field] = !CFG[field]; cfgSave(); paintSettings();
+            });
+        }
+        toggleCfg('cfgReqCond', 'reqCond');
+        toggleCfg('cfgReqWork', 'reqWork');
+
+        document.getElementById('cfgFeedback').addEventListener('click', () => {
+            const v = prompt('Отклик при сохранении:\n1. Выключен\n2. Вибрация\n3. Звук\n4. Звук и вибрация', '');
+            const map = { '1': 'off', '2': 'vibro', '3': 'sound', '4': 'both' };
+            if (v && map[v.trim()]) {
+                CFG.feedback = map[v.trim()]; cfgSave(); paintSettings(); feedbackOk();
+            }
+        });
+
+        document.getElementById('cfgPhoto').addEventListener('click', () => {
+            const v = prompt('Качество фото:\n1. Экономно (720 px)\n2. Обычное (1080 px)\n3. Максимум (1440 px)', '');
+            const map = { '1': 'eco', '2': 'normal', '3': 'high' };
+            if (v && map[v.trim()]) { CFG.photo = map[v.trim()]; cfgSave(); paintSettings(); }
+        });
+
+        document.getElementById('cfgMaxLocal').addEventListener('click', () => {
+            const n = parseInt(prompt('Сколько последних записей держать в приложении (5–100):',
+                                      String(CFG.maxLocal)), 10);
+            if (n >= 5 && n <= 100) {
+                CFG.maxLocal = n; cfgSave();
+                if (items.length > CFG.maxLocal) items = items.slice(-CFG.maxLocal);
+                saveItems(); renderTable(); paintSettings();
+            }
+        });
+
+        /* --- сброс --- */
+        document.getElementById('cfgClearList').addEventListener('click', () => {
+            if (!items.length) { alert('Список уже пуст'); return; }
+            if (!confirm('Очистить список на этом устройстве?\n\nЗаписи останутся в Google Таблице.')) return;
+            items = []; saveItems(); renderTable(); paintSettings();
+        });
+
+        document.getElementById('cfgDropAll').addEventListener('click', () => {
+            if (!confirm('Полный сброс: список, имя, склад, пароль и настройки.\n\nПродолжить?')) return;
+            ['inventoryItems','inventoryOperator','inventoryWarehouse','inventoryKey',
+             'inventoryTheme','invConfig'].forEach(k => localStorage.removeItem(k));
+            location.reload();
+        });
+
         function applyTheme(mode) {
             if (mode) document.documentElement.setAttribute('data-theme', mode);
             else document.documentElement.removeAttribute('data-theme');
         }
 
         function currentlyDark() {
-            const saved = localStorage.getItem('inventoryTheme');
-            if (saved) return saved === 'dark';
+            if (CFG.theme) return CFG.theme === 'dark';
             return window.matchMedia('(prefers-color-scheme: dark)').matches;
         }
 
-        applyTheme(localStorage.getItem('inventoryTheme'));
+        applyTheme(CFG.theme);
 
         document.getElementById('themeBtn').addEventListener('click', () => {
-            const next = currentlyDark() ? 'light' : 'dark';
-            localStorage.setItem('inventoryTheme', next);
-            applyTheme(next);
+            CFG.theme = currentlyDark() ? 'light' : 'dark';
+            cfgSave();
+            applyTheme(CFG.theme);
         });
 
-        if (SPREADSHEET_URL) {
+        function paintSheetLink() {
             const link = document.getElementById('sheetLink');
-            link.href = SPREADSHEET_URL;
-            link.style.display = 'flex';
+            if (CFG.sheetUrl) { link.href = CFG.sheetUrl; link.style.display = 'flex'; }
+            else link.style.display = 'none';
         }
+        paintSheetLink();
 
         loadItems();
         loadKey();
