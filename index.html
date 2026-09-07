@@ -541,11 +541,12 @@
             flex:1; min-width:0; text-align:right; font-size:15px; color:var(--ios-gray);
             white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
         }
-        button.set-row {
+        button.set-row, a.set-row {
             width:100%; border:none; background:none; font-family:inherit;
-            text-align:left; cursor:pointer;
+            text-align:left; cursor:pointer; text-decoration:none;
         }
-        button.set-row:active { background:var(--chip-bg); }
+        button.set-row:active, a.set-row:active { background:var(--chip-bg); }
+        a.set-row .k { color:var(--ios-blue); }
         .set-row.danger .k { color:var(--ios-red); }
         .set-row .chev { flex:0 0 auto; color:var(--ios-gray2); font-size:17px; }
 
@@ -825,29 +826,10 @@
         <div class="page-foot">
             <button type="button" class="help-link" id="settingsBtn" aria-label="Настройки">
                 <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="1.5"/>
-                    <path d="M12 3.6v2.2M12 18.2v2.2M20.4 12h-2.2M5.8 12H3.6M18 6l-1.6 1.6M7.6 16.4 6 18M18 18l-1.6-1.6M7.6 7.6 6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    <path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z" stroke="currentColor" stroke-width="1.5"/>
+                    <path d="M19.3 14.4a1.5 1.5 0 0 0 .3 1.65l.06.06a1.8 1.8 0 1 1-2.55 2.55l-.06-.06a1.5 1.5 0 0 0-1.65-.3 1.5 1.5 0 0 0-.91 1.37v.17a1.8 1.8 0 1 1-3.6 0v-.09a1.5 1.5 0 0 0-.98-1.37 1.5 1.5 0 0 0-1.65.3l-.06.06a1.8 1.8 0 1 1-2.55-2.55l.06-.06a1.5 1.5 0 0 0 .3-1.65 1.5 1.5 0 0 0-1.37-.91h-.17a1.8 1.8 0 1 1 0-3.6h.09a1.5 1.5 0 0 0 1.37-.98 1.5 1.5 0 0 0-.3-1.65l-.06-.06A1.8 1.8 0 1 1 7.6 4.36l.06.06a1.5 1.5 0 0 0 1.65.3h.07a1.5 1.5 0 0 0 .91-1.37v-.17a1.8 1.8 0 1 1 3.6 0v.09a1.5 1.5 0 0 0 .91 1.37 1.5 1.5 0 0 0 1.65-.3l.06-.06a1.8 1.8 0 1 1 2.55 2.55l-.06.06a1.5 1.5 0 0 0-.3 1.65v.07a1.5 1.5 0 0 0 1.37.91h.17a1.8 1.8 0 1 1 0 3.6h-.09a1.5 1.5 0 0 0-1.37.91Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
             </button>
-            <button type="button" class="help-link" id="themeBtn" aria-label="Сменить тему">
-                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M20.2 14.6A8.4 8.4 0 1 1 9.4 3.8a6.6 6.6 0 0 0 10.8 10.8Z"
-                          stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-                </svg>
-            </button>
-            <a class="help-link" id="sheetLink" href="#" target="_blank" rel="noopener" aria-label="Открыть Google Таблицу" style="display:none;">
-                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <rect x="4" y="3.4" width="16" height="17.2" rx="2.2" stroke="currentColor" stroke-width="1.5"/>
-                    <path d="M4 9.2h16M4 14.8h16M10.6 9.2v11.4" stroke="currentColor" stroke-width="1.5"/>
-                </svg>
-            </a>
-            <a class="help-link" href="instruction.html" aria-label="Как пользоваться приложением">
-                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <circle cx="12" cy="12" r="9.2" stroke="currentColor" stroke-width="1.5"/>
-                    <circle cx="12" cy="7.9" r="1.15" fill="currentColor"/>
-                    <path d="M12 11v5.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                </svg>
-            </a>
         </div>
 
     </div>
@@ -888,13 +870,10 @@
         </div>
 
         <div class="set-group">
-            <div class="set-title">Оператор</div>
+            <div class="set-title">Склад</div>
             <div class="set-card">
-                <button type="button" class="set-row" id="cfgOperator">
-                    <span class="k">Имя</span><span class="v" id="cfgOperatorV"></span><span class="chev">›</span>
-                </button>
                 <button type="button" class="set-row" id="cfgWarehouse">
-                    <span class="k">Склад</span><span class="v" id="cfgWarehouseV"></span><span class="chev">›</span>
+                    <span class="k">Текущий склад</span><span class="v" id="cfgWarehouseV"></span><span class="chev">›</span>
                 </button>
             </div>
             <div class="set-note">Каждый склад — отдельный лист в таблице. Лист создаётся сам при первой записи.</div>
@@ -903,9 +882,14 @@
         <div class="set-group">
             <div class="set-title">Вид</div>
             <div class="set-card">
-                <button type="button" class="set-row" id="cfgTheme">
-                    <span class="k">Тема</span><span class="v" id="cfgThemeV"></span><span class="chev">›</span>
-                </button>
+                <div class="set-row stacked">
+                    <span class="k">Тема</span>
+                    <div class="segmented" id="setTheme">
+                        <button type="button" data-v="dark">Тёмная</button>
+                        <button type="button" data-v="light">Светлая</button>
+                        <button type="button" data-v="">Как в системе</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -920,17 +904,46 @@
                     <span class="k">Требовать работоспособность</span><span class="v"></span>
                     <button type="button" class="switch" id="cfgReqWork" aria-label="Требовать работоспособность"></button>
                 </div>
-                <button type="button" class="set-row" id="cfgFeedback">
-                    <span class="k">Отклик при сохранении</span><span class="v" id="cfgFeedbackV"></span><span class="chev">›</span>
-                </button>
-                <button type="button" class="set-row" id="cfgPhoto">
-                    <span class="k">Качество фото</span><span class="v" id="cfgPhotoV"></span><span class="chev">›</span>
-                </button>
-                <button type="button" class="set-row" id="cfgMaxLocal">
-                    <span class="k">Записей в списке</span><span class="v" id="cfgMaxLocalV"></span><span class="chev">›</span>
-                </button>
+                <div class="set-row stacked">
+                    <span class="k">Отклик при сохранении</span>
+                    <div class="segmented" id="setFeedback">
+                        <button type="button" data-v="both">Звук и вибро</button>
+                        <button type="button" data-v="vibro">Вибро</button>
+                        <button type="button" data-v="sound">Звук</button>
+                        <button type="button" data-v="off">Нет</button>
+                    </div>
+                </div>
+                <div class="set-row stacked">
+                    <span class="k">Качество фото</span>
+                    <div class="segmented" id="setPhoto">
+                        <button type="button" data-v="eco">Экономно</button>
+                        <button type="button" data-v="normal">Обычное</button>
+                        <button type="button" data-v="high">Максимум</button>
+                    </div>
+                </div>
+                <div class="set-row stacked">
+                    <span class="k">Записей в списке</span>
+                    <div class="segmented" id="setMaxLocal">
+                        <button type="button" data-v="15">15</button>
+                        <button type="button" data-v="30">30</button>
+                        <button type="button" data-v="50">50</button>
+                        <button type="button" data-v="100">100</button>
+                    </div>
+                </div>
             </div>
             <div class="set-note">Экономное фото — около 60 КБ, максимум — до 400 КБ. На слабой связи меньше значит быстрее.</div>
+        </div>
+
+        <div class="set-group">
+            <div class="set-title">Материалы</div>
+            <div class="set-card">
+                <a class="set-row" href="instruction.html">
+                    <span class="k">Как пользоваться</span><span class="v"></span><span class="chev">›</span>
+                </a>
+                <a class="set-row" id="cfgOpenSheet" href="#" target="_blank" rel="noopener">
+                    <span class="k">Открыть таблицу</span><span class="v"></span><span class="chev">›</span>
+                </a>
+            </div>
         </div>
 
         <div class="set-group">
@@ -993,7 +1006,7 @@
             reqCond: false,
             reqWork: false,
             maxLocal: 30,
-            theme: ''
+            theme: 'dark'
         };
 
         const PHOTO_PRESETS = {
@@ -1533,17 +1546,82 @@
             document.getElementById('warehouseName').textContent = warehouse || 'Не задан';
         }
 
-        function askWarehouse(force) {
-            const entered = prompt('Склад — он подставится в каждую запись:', warehouse);
+        /* ---------- список складов = листы таблицы ---------- */
+        let warehouses = [];
+
+        function loadWarehouses() {
+            try { warehouses = JSON.parse(localStorage.getItem('inventoryWarehouses') || '[]'); }
+            catch (e) { warehouses = []; }
+        }
+
+        async function fetchWarehouses() {
+            if (!CFG.url || !accessKey) return false;
+            try {
+                const res = await fetch(CFG.url, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'ping', key: accessKey })
+                });
+                const r = await res.json();
+                if (r.status === 'success' && Array.isArray(r.sheets)) {
+                    warehouses = r.sheets;
+                    localStorage.setItem('inventoryWarehouses', JSON.stringify(warehouses));
+                    return true;
+                }
+            } catch (e) {}
+            return false;
+        }
+
+        function rememberWarehouse(name) {
+            if (name && warehouses.indexOf(name) === -1) {
+                warehouses.push(name);
+                localStorage.setItem('inventoryWarehouses', JSON.stringify(warehouses));
+            }
+        }
+
+        function applyWarehouse(name) {
+            warehouse = name;
+            localStorage.setItem('inventoryWarehouse', warehouse);
+            document.getElementById('warehouseName').textContent = warehouse;
+            rememberWarehouse(warehouse);
+        }
+
+        function newWarehouse(force) {
+            const entered = prompt('Название нового склада:', '');
             const clean = entered === null ? '' : entered.trim();
             if (!clean) {
-                // обязательное поле: спрашиваем, пока не введут
                 if (force) setTimeout(() => askWarehouse(true), 150);
                 return;
             }
-            warehouse = clean;
-            localStorage.setItem('inventoryWarehouse', warehouse);
-            document.getElementById('warehouseName').textContent = warehouse;
+            // защита от почти одинаковых названий
+            const same = warehouses.find(w => w.toLowerCase().trim() === clean.toLowerCase());
+            if (same) {
+                alert('Такой склад уже есть: «' + same + '».\nВыбран он, новый лист не создан.');
+                applyWarehouse(same);
+                return;
+            }
+            applyWarehouse(clean);
+        }
+
+        async function askWarehouse(force) {
+            await fetchWarehouses();   // подтягиваем свежий список листов
+
+            if (!warehouses.length) { newWarehouse(force); return; }
+
+            const list = warehouses
+                .map((w, i) => (i + 1) + '. ' + w + (w === warehouse ? ' ✓' : ''))
+                .join('\n');
+            const v = prompt('Склад — выберите из существующих:\n' + list + '\n\n0. Создать новый', '');
+
+            if (v === null) {
+                if (force) setTimeout(() => askWarehouse(true), 150);
+                return;
+            }
+            const i = parseInt(v.trim(), 10);
+            if (i === 0) { newWarehouse(force); return; }
+            if (i >= 1 && i <= warehouses.length) { applyWarehouse(warehouses[i - 1]); return; }
+
+            alert('Введите номер из списка.');
+            setTimeout(() => askWarehouse(force), 150);
         }
 
         function askOperator(force) {
@@ -1573,7 +1651,6 @@
         // тема: по умолчанию системная, выбор запоминается
 
         /* ======================= настройки ======================= */
-        const THEME_LABELS = { '': 'Как в системе', light: 'Светлая', dark: 'Тёмная' };
 
         function openSettings() {
             paintSettings();
@@ -1591,18 +1668,44 @@
             document.getElementById('cfgUrl').value = CFG.url || '';
             document.getElementById('cfgSheetUrl').value = CFG.sheetUrl || '';
             document.getElementById('cfgPasswordV').textContent = accessKey ? 'задан' : 'не задан';
-
-            document.getElementById('cfgOperatorV').textContent = operator || 'не задано';
             document.getElementById('cfgWarehouseV').textContent = warehouse || 'не задан';
 
-            document.getElementById('cfgThemeV').textContent = THEME_LABELS[CFG.theme || ''];
             document.getElementById('cfgReqCond').classList.toggle('on', !!CFG.reqCond);
             document.getElementById('cfgReqWork').classList.toggle('on', !!CFG.reqWork);
-            document.getElementById('cfgFeedbackV').textContent = FEEDBACK_LABELS[CFG.feedback];
-            document.getElementById('cfgPhotoV').textContent =
-                (PHOTO_PRESETS[CFG.photo] || PHOTO_PRESETS.normal).label;
-            document.getElementById('cfgMaxLocalV').textContent = CFG.maxLocal;
+
+            markSeg('setTheme', CFG.theme || '');
+            markSeg('setFeedback', CFG.feedback);
+            markSeg('setPhoto', CFG.photo);
+            markSeg('setMaxLocal', String(CFG.maxLocal));
+
+            const openSheet = document.getElementById('cfgOpenSheet');
+            openSheet.href = CFG.sheetUrl || '#';
+            openSheet.style.display = CFG.sheetUrl ? 'flex' : 'none';
         }
+
+        function markSeg(id, value) {
+            document.querySelectorAll('#' + id + ' button').forEach(b =>
+                b.classList.toggle('on', b.dataset.v === value));
+        }
+
+        // сегменты в настройках: выбор всегда один, снять нельзя
+        function bindSeg(id, apply) {
+            document.getElementById(id).addEventListener('click', (e) => {
+                const b = e.target.closest('button');
+                if (!b) return;
+                apply(b.dataset.v);
+                cfgSave();
+                paintSettings();
+            });
+        }
+
+        bindSeg('setTheme', v => { CFG.theme = v; applyTheme(v); });
+        bindSeg('setFeedback', v => { CFG.feedback = v; setTimeout(feedbackOk, 60); });
+        bindSeg('setPhoto', v => { CFG.photo = v; });
+        bindSeg('setMaxLocal', v => {
+            CFG.maxLocal = Number(v);
+            if (items.length > CFG.maxLocal) { items = items.slice(-CFG.maxLocal); saveItems(); renderTable(); }
+        });
 
         /* --- подключение --- */
         document.getElementById('cfgUrl').addEventListener('change', (e) => {
@@ -1636,24 +1739,13 @@
         });
 
         /* --- оператор --- */
-        document.getElementById('cfgOperator').addEventListener('click', () => {
-            askOperator(false); setTimeout(paintSettings, 100);
-        });
+
         document.getElementById('cfgWarehouse').addEventListener('click', () => {
             askWarehouse(false); setTimeout(paintSettings, 100);
         });
 
         /* --- вид --- */
-        document.getElementById('cfgTheme').addEventListener('click', () => {
-            const v = prompt('Тема:\n1. Как в системе\n2. Светлая\n3. Тёмная', '');
-            const map = { '1': '', '2': 'light', '3': 'dark' };
-            if (v !== null && map[v.trim()] !== undefined) {
-                CFG.theme = map[v.trim()];
-                cfgSave();
-                applyTheme(CFG.theme);
-                paintSettings();
-            }
-        });
+
 
         /* --- заполнение --- */
         function toggleCfg(id, field) {
@@ -1664,29 +1756,11 @@
         toggleCfg('cfgReqCond', 'reqCond');
         toggleCfg('cfgReqWork', 'reqWork');
 
-        document.getElementById('cfgFeedback').addEventListener('click', () => {
-            const v = prompt('Отклик при сохранении:\n1. Выключен\n2. Вибрация\n3. Звук\n4. Звук и вибрация', '');
-            const map = { '1': 'off', '2': 'vibro', '3': 'sound', '4': 'both' };
-            if (v && map[v.trim()]) {
-                CFG.feedback = map[v.trim()]; cfgSave(); paintSettings(); feedbackOk();
-            }
-        });
 
-        document.getElementById('cfgPhoto').addEventListener('click', () => {
-            const v = prompt('Качество фото:\n1. Экономно (720 px)\n2. Обычное (1080 px)\n3. Максимум (1440 px)', '');
-            const map = { '1': 'eco', '2': 'normal', '3': 'high' };
-            if (v && map[v.trim()]) { CFG.photo = map[v.trim()]; cfgSave(); paintSettings(); }
-        });
 
-        document.getElementById('cfgMaxLocal').addEventListener('click', () => {
-            const n = parseInt(prompt('Сколько последних записей держать в приложении (5–100):',
-                                      String(CFG.maxLocal)), 10);
-            if (n >= 5 && n <= 100) {
-                CFG.maxLocal = n; cfgSave();
-                if (items.length > CFG.maxLocal) items = items.slice(-CFG.maxLocal);
-                saveItems(); renderTable(); paintSettings();
-            }
-        });
+
+
+
 
         /* --- сброс --- */
         document.getElementById('cfgClearList').addEventListener('click', () => {
@@ -1714,27 +1788,23 @@
 
         applyTheme(CFG.theme);
 
-        document.getElementById('themeBtn').addEventListener('click', () => {
-            CFG.theme = currentlyDark() ? 'light' : 'dark';
-            cfgSave();
-            applyTheme(CFG.theme);
-        });
 
         function paintSheetLink() {
-            const link = document.getElementById('sheetLink');
-            if (CFG.sheetUrl) { link.href = CFG.sheetUrl; link.style.display = 'flex'; }
-            else link.style.display = 'none';
+            const row = document.getElementById('cfgOpenSheet');
+            if (row) row.style.display = CFG.sheetUrl ? 'flex' : 'none';
         }
-        paintSheetLink();
 
         loadItems();
         loadKey();
+        loadWarehouses();
         loadOperator();
         loadWarehouse();
         updatePhotoStrip();
         renderTable();
 
         // при первом запуске: пароль → имя → склад
+        fetchWarehouses();
+
         if (!accessKey) {
             setTimeout(() => askKey(true), 400);
         } else if (!operator) {
