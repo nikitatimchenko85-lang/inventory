@@ -1762,28 +1762,44 @@
         async function requireAdmin() {
             if (CFG.role === 'admin') return true;
 
+            if (!CFG.url) {
+                alert('Ссылка на скрипт не указана — открываю настройки.');
+                return true;
+            }
+
             const p = prompt('Настройки доступны ответственному.\nВведите пароль администратора:', '');
             const clean = p === null ? '' : p.trim();
             if (!clean) return false;
 
-            if (!CFG.url) { alert('Не указана ссылка на скрипт.'); return false; }
-
+            let detail = '';
             try {
                 const res = await fetch(CFG.url, {
                     method: 'POST',
                     body: JSON.stringify({ action: 'ping', key: clean })
                 });
-                const r = await res.json();
-                if (r.status === 'success' && r.role === 'admin') {
-                    CFG.role = 'admin';
-                    cfgSave();
-                    return true;
+                const text = await res.text();
+
+                let r = null;
+                try { r = JSON.parse(text); }
+                catch (e) { detail = 'Скрипт ответил не по формату (код ' + res.status + ').'; }
+
+                if (r) {
+                    if (r.status === 'success' && r.role === 'admin') {
+                        CFG.role = 'admin'; cfgSave(); return true;
+                    }
+                    if (r.code === 'auth') { alert('Пароль не подошёл.'); return false; }
+                    if (r.status === 'success' && !r.role) {
+                        detail = 'Скрипт старой версии: он не различает роли.';
+                    } else {
+                        detail = r.message || 'Скрипт вернул ошибку.';
+                    }
                 }
-                alert('Пароль не подошёл.');
             } catch (e) {
-                alert('Нет связи — проверить пароль не удалось.');
+                detail = 'Нет связи со скриптом.';
             }
-            return false;
+
+            // не смогли проверить — даём войти, иначе ссылку не починить
+            return confirm(detail + '\n\nОткрыть настройки, чтобы исправить ссылку или пароль?');
         }
 
         async function openSettings() {
