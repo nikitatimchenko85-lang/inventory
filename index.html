@@ -903,12 +903,6 @@
             <div class="set-title">Подключение</div>
             <div class="set-card">
                 <div class="set-row stacked">
-                    <span class="k">Ссылка Apps Script</span>
-                    <input type="text" class="url" id="cfgUrl" name="cfg-url"
-                           placeholder="https://script.google.com/macros/s/.../exec"
-                           autocomplete="off" autocorrect="off" spellcheck="false">
-                </div>
-                <div class="set-row stacked">
                     <span class="k">Ссылка на таблицу</span>
                     <input type="text" class="url" id="cfgSheetUrl" name="cfg-sheet"
                            placeholder="https://docs.google.com/spreadsheets/..."
@@ -920,14 +914,8 @@
                 <button type="button" class="set-row" id="cfgTest">
                     <span class="k" style="color:var(--ios-blue);">Проверить связь</span>
                 </button>
-                <button type="button" class="set-row" id="cfgShare">
-                    <span class="k" style="color:var(--ios-blue);">Поделиться приложением</span>
-                </button>
-                <button type="button" class="set-row" id="cfgShare">
-                    <span class="k" style="color:var(--ios-blue);">Ссылка для сотрудников</span>
-                </button>
             </div>
-            <div class="set-note">После нового развёртывания скрипта вставьте сюда свежую ссылку. Чтобы она разошлась по телефонам сотрудников, отправьте им «Ссылку для сотрудников» — настройки внутри неё применятся сами.</div>
+            <div class="set-note">Адрес скрипта задан в самом приложении. После нового развёртывания его меняют в файле и заливают заново — тогда обновится у всех сразу.</div>
         </div>
 
         <div class="set-group">
@@ -1069,7 +1057,6 @@
             maxLocal: 30,
             theme: 'dark',
             role: '',
-            urlSeed: '',
             v: 2
         };
 
@@ -1113,27 +1100,8 @@
 
         let CFG = cfgLoad();
 
-        // ссылка из файла главнее сохранённой: обновили index.html — обновилось у всех
-        if (CFG.urlSeed !== CFG_DEFAULT.url) {
-            CFG.url = CFG_DEFAULT.url;
-            CFG.urlSeed = CFG_DEFAULT.url;
-            if (CFG_DEFAULT.sheetUrl) CFG.sheetUrl = CFG_DEFAULT.sheetUrl;
-            cfgSave();
-        }
-
-        // настройка по ссылке-приглашению: index.html#setup=...
-        (function applySetupLink() {
-            const h = location.hash || '';
-            if (h.indexOf('#setup=') !== 0) return;
-            try {
-                const raw = decodeURIComponent(escape(atob(h.slice(7))));
-                const cfg = JSON.parse(raw);
-                if (cfg.url) { CFG.url = cfg.url; CFG.urlSeed = cfg.url; }
-                if (cfg.sheetUrl) CFG.sheetUrl = cfg.sheetUrl;
-                cfgSave();
-            } catch (e) {}
-            history.replaceState(null, '', location.pathname + location.search);
-        })();
+        // адрес скрипта живёт только в файле — сохранённое значение не используем
+        CFG.url = CFG_DEFAULT.url;
 
         // разовый перенос: у кого осталось «как в системе» с прошлой версии — ставим тёмную
         if (CFG.v !== 2) {
@@ -1881,7 +1849,6 @@
         document.getElementById('closeSettings').addEventListener('click', closeSettings);
 
         function paintSettings() {
-            document.getElementById('cfgUrl').value = CFG.url || '';
             document.getElementById('cfgSheetUrl').value = CFG.sheetUrl || '';
             document.getElementById('cfgPasswordV').textContent = accessKey ? 'задан' : 'не задан';
             document.getElementById('cfgWarehouseV').textContent = warehouse || 'не задан';
@@ -1924,9 +1891,6 @@
         });
 
         /* --- подключение --- */
-        document.getElementById('cfgUrl').addEventListener('change', (e) => {
-            CFG.url = e.target.value.trim(); cfgSave();
-        });
         document.getElementById('cfgSheetUrl').addEventListener('change', (e) => {
             CFG.sheetUrl = e.target.value.trim(); cfgSave(); paintSheetLink();
         });
@@ -1951,36 +1915,6 @@
                 }
             } catch (e) {
                 alert('Не удалось связаться со скриптом.\nПроверьте ссылку и интернет.');
-            }
-        });
-
-        document.getElementById('cfgShare').addEventListener('click', async () => {
-            if (!CFG.url) { alert('Сначала укажите ссылку Apps Script'); return; }
-
-            const payload = btoa(unescape(encodeURIComponent(JSON.stringify({
-                url: CFG.url, sheetUrl: CFG.sheetUrl
-            }))));
-            const link = location.origin + location.pathname + '#setup=' + payload;
-
-            // системное «Поделиться» — можно отправить в мессенджер сразу
-            if (navigator.share) {
-                try {
-                    await navigator.share({
-                        title: 'Инвентаризация',
-                        text: 'Приложение для инвентаризации. Открой ссылку и добавь на экран «Домой».',
-                        url: link
-                    });
-                    return;
-                } catch (e) {
-                    if (e && e.name === 'AbortError') return;   // сам закрыл окно
-                }
-            }
-
-            try {
-                await navigator.clipboard.writeText(link);
-                alert('Ссылка скопирована — отправьте её сотруднику.');
-            } catch (e) {
-                prompt('Скопируйте ссылку:', link);
             }
         });
 
