@@ -920,8 +920,14 @@
                 <button type="button" class="set-row" id="cfgTest">
                     <span class="k" style="color:var(--ios-blue);">Проверить связь</span>
                 </button>
+                <button type="button" class="set-row" id="cfgShare">
+                    <span class="k" style="color:var(--ios-blue);">Ссылка для сотрудника</span>
+                </button>
+                <button type="button" class="set-row" id="cfgShare">
+                    <span class="k" style="color:var(--ios-blue);">Ссылка для сотрудников</span>
+                </button>
             </div>
-            <div class="set-note">После нового развёртывания скрипта вставьте сюда свежую ссылку — переустанавливать приложение не нужно.</div>
+            <div class="set-note">После нового развёртывания скрипта вставьте сюда свежую ссылку. Чтобы она разошлась по телефонам сотрудников, отправьте им «Ссылку для сотрудников» — настройки внутри неё применятся сами.</div>
         </div>
 
         <div class="set-group">
@@ -1063,6 +1069,7 @@
             maxLocal: 30,
             theme: 'dark',
             role: '',
+            urlSeed: '',
             v: 2
         };
 
@@ -1105,6 +1112,28 @@
         }
 
         let CFG = cfgLoad();
+
+        // ссылка из файла главнее сохранённой: обновили index.html — обновилось у всех
+        if (CFG.urlSeed !== CFG_DEFAULT.url) {
+            CFG.url = CFG_DEFAULT.url;
+            CFG.urlSeed = CFG_DEFAULT.url;
+            if (CFG_DEFAULT.sheetUrl) CFG.sheetUrl = CFG_DEFAULT.sheetUrl;
+            cfgSave();
+        }
+
+        // настройка по ссылке-приглашению: index.html#setup=...
+        (function applySetupLink() {
+            const h = location.hash || '';
+            if (h.indexOf('#setup=') !== 0) return;
+            try {
+                const raw = decodeURIComponent(escape(atob(h.slice(7))));
+                const cfg = JSON.parse(raw);
+                if (cfg.url) { CFG.url = cfg.url; CFG.urlSeed = cfg.url; }
+                if (cfg.sheetUrl) CFG.sheetUrl = cfg.sheetUrl;
+                cfgSave();
+            } catch (e) {}
+            history.replaceState(null, '', location.pathname + location.search);
+        })();
 
         // разовый перенос: у кого осталось «как в системе» с прошлой версии — ставим тёмную
         if (CFG.v !== 2) {
@@ -1764,6 +1793,35 @@
 
         // тема: по умолчанию системная, выбор запоминается
 
+        /* ---------- перенос настроек ссылкой ---------- */
+        function packConfig() {
+            const payload = JSON.stringify({ url: CFG.url, sheetUrl: CFG.sheetUrl });
+            return btoa(unescape(encodeURIComponent(payload)));
+        }
+
+        function unpackConfig(code) {
+            try { return JSON.parse(decodeURIComponent(escape(atob(code)))); }
+            catch (e) { return null; }
+        }
+
+        // ссылка вида .../index.html#cfg=...
+        function applyConfigFromHash() {
+            const h = location.hash || '';
+            if (h.indexOf('#cfg=') !== 0) return;
+
+            const data = unpackConfig(h.slice(5));
+            history.replaceState(null, '', location.pathname + location.search);
+            if (!data || !data.url) return;
+
+            if (data.url === CFG.url && (data.sheetUrl || '') === (CFG.sheetUrl || '')) return;
+
+            CFG.url = data.url;
+            if (data.sheetUrl) CFG.sheetUrl = data.sheetUrl;
+            cfgSave();
+            localStorage.removeItem('inventoryWarehouses');
+            setTimeout(() => alert('Настройки подключения обновлены.'), 300);
+        }
+
         /* ======================= настройки ======================= */
 
         async function requireAdmin() {
@@ -1896,6 +1954,41 @@
             }
         });
 
+        document.getElementById('cfgShare').addEventListener('click', () => {
+            if (!CFG.url) { alert('Сначала укажите ссылку Apps Script'); return; }
+
+            const base = location.origin + location.pathname;
+            const link = base + '#cfg=' + packConfig();
+
+            if (navigator.share) {
+                navigator.share({ title: 'Инвентаризация', url: link }).catch(() => {});
+                return;
+            }
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(link)
+                    .then(() => alert('Ссылка скопирована.\nОтправьте её сотрудникам — настройки применятся при первом открытии.'))
+                    .catch(() => prompt('Скопируйте ссылку для сотрудников:', link));
+                return;
+            }
+            prompt('Скопируйте ссылку для сотрудников:', link);
+        });
+
+        document.getElementById('cfgShare').addEventListener('click', async () => {
+            if (!CFG.url) { alert('Сначала укажите ссылку Apps Script'); return; }
+
+            const payload = btoa(unescape(encodeURIComponent(JSON.stringify({
+                url: CFG.url, sheetUrl: CFG.sheetUrl
+            }))));
+            const link = location.origin + location.pathname + '#setup=' + payload;
+
+            try {
+                await navigator.clipboard.writeText(link);
+                alert('Ссылка скопирована.\n\nОтправьте её сотруднику — при открытии приложение само подхватит адрес скрипта.');
+            } catch (e) {
+                prompt('Скопируйте ссылку для сотрудника:', link);
+            }
+        });
+
         /* --- оператор --- */
 
         document.getElementById('cfgWarehouse').addEventListener('click', () => {
@@ -1961,6 +2054,7 @@
         renderTable();
 
         // при первом запуске: пароль → имя → склад
+        applyConfigFromHash();
         fetchWarehouses();
 
         if (!accessKey) {
