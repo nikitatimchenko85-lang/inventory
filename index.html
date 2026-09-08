@@ -921,7 +921,7 @@
                     <span class="k" style="color:var(--ios-blue);">Проверить связь</span>
                 </button>
                 <button type="button" class="set-row" id="cfgShare">
-                    <span class="k" style="color:var(--ios-blue);">Ссылка для сотрудника</span>
+                    <span class="k" style="color:var(--ios-blue);">Поделиться приложением</span>
                 </button>
                 <button type="button" class="set-row" id="cfgShare">
                     <span class="k" style="color:var(--ios-blue);">Ссылка для сотрудников</span>
@@ -1954,25 +1954,6 @@
             }
         });
 
-        document.getElementById('cfgShare').addEventListener('click', () => {
-            if (!CFG.url) { alert('Сначала укажите ссылку Apps Script'); return; }
-
-            const base = location.origin + location.pathname;
-            const link = base + '#cfg=' + packConfig();
-
-            if (navigator.share) {
-                navigator.share({ title: 'Инвентаризация', url: link }).catch(() => {});
-                return;
-            }
-            if (navigator.clipboard) {
-                navigator.clipboard.writeText(link)
-                    .then(() => alert('Ссылка скопирована.\nОтправьте её сотрудникам — настройки применятся при первом открытии.'))
-                    .catch(() => prompt('Скопируйте ссылку для сотрудников:', link));
-                return;
-            }
-            prompt('Скопируйте ссылку для сотрудников:', link);
-        });
-
         document.getElementById('cfgShare').addEventListener('click', async () => {
             if (!CFG.url) { alert('Сначала укажите ссылку Apps Script'); return; }
 
@@ -1981,11 +1962,25 @@
             }))));
             const link = location.origin + location.pathname + '#setup=' + payload;
 
+            // системное «Поделиться» — можно отправить в мессенджер сразу
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: 'Инвентаризация',
+                        text: 'Приложение для инвентаризации. Открой ссылку и добавь на экран «Домой».',
+                        url: link
+                    });
+                    return;
+                } catch (e) {
+                    if (e && e.name === 'AbortError') return;   // сам закрыл окно
+                }
+            }
+
             try {
                 await navigator.clipboard.writeText(link);
-                alert('Ссылка скопирована.\n\nОтправьте её сотруднику — при открытии приложение само подхватит адрес скрипта.');
+                alert('Ссылка скопирована — отправьте её сотруднику.');
             } catch (e) {
-                prompt('Скопируйте ссылку для сотрудника:', link);
+                prompt('Скопируйте ссылку:', link);
             }
         });
 
