@@ -558,6 +558,47 @@
             font-family:ui-monospace, monospace; font-size:13px; color:var(--ios-label);
         }
 
+        .gate {
+            display:none; position:fixed; inset:0; z-index:500;
+            background:var(--ios-bg); overflow-y:auto;
+            padding:calc(40px + env(safe-area-inset-top,0px)) 24px 40px;
+        }
+        .gate.open { display:block; }
+        .gate-box { max-width:460px; margin:0 auto; }
+        .gate-icon {
+            width:54px; height:54px; border-radius:14px; background:var(--chip-bg);
+            color:var(--ios-blue); display:flex; align-items:center; justify-content:center;
+            margin-bottom:22px;
+        }
+        .gate-icon svg { width:28px; height:28px; display:block; }
+        .gate h2 { font-size:26px; font-weight:700; letter-spacing:-.4px; line-height:1.2; }
+        .gate p { margin-top:14px; font-size:16px; color:var(--ios-gray); line-height:1.5; }
+        .gate-steps {
+            margin:22px 0 0; padding:0; list-style:none;
+            background:var(--ios-card); border-radius:10px; overflow:hidden;
+            counter-reset:g;
+        }
+        .gate-steps li {
+            display:flex; gap:12px; align-items:flex-start;
+            padding:14px; font-size:16px; position:relative;
+        }
+        .gate-steps li + li::before {
+            content:''; position:absolute; top:0; left:14px; right:0;
+            height:.5px; background:var(--ios-separator);
+        }
+        .gate-steps li::after {
+            counter-increment:g; content:counter(g);
+            order:-1; flex:0 0 auto; width:24px; height:24px; border-radius:50%;
+            background:var(--ios-blue); color:#fff; font-size:13px; font-weight:600;
+            display:flex; align-items:center; justify-content:center; margin-top:1px;
+        }
+        .gate-skip {
+            display:block; width:100%; margin-top:26px; padding:12px;
+            border:none; background:none; font-family:inherit; font-size:15px;
+            color:var(--ios-gray); cursor:pointer;
+        }
+        .gate-skip:active { opacity:.5; }
+
         .wh-input {
             flex:1; min-width:0; border:none; outline:none; background:transparent;
             font-family:inherit; font-size:16px; color:var(--ios-label); padding:0;
@@ -857,6 +898,28 @@
 
     </div>
 
+
+<!-- предложение установить -->
+<div class="gate" id="installGate">
+    <div class="gate-box">
+        <div class="gate-icon">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 3.5v11M8.4 7.1 12 3.5l3.6 3.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M5.5 13.5v5a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2v-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+        </div>
+        <h2>Добавьте на экран «Домой»</h2>
+        <p>Пароль и имя запрашиваются один раз — но только в самом приложении. Если ввести их сейчас, в браузере, после установки придётся вводить заново: iPhone хранит эти данные раздельно.</p>
+
+        <ol class="gate-steps">
+            <li>Нажмите <b>Поделиться</b> внизу экрана</li>
+            <li>Пролистайте список и выберите <b>На экран «Домой»</b></li>
+            <li>Запускайте приложение с появившегося значка</li>
+        </ol>
+
+        <button type="button" class="gate-skip" id="gateSkip">Всё равно открыть в браузере</button>
+    </div>
+</div>
 
 <!-- выбор склада -->
 <div class="sheet" id="whSheet">
@@ -1982,16 +2045,42 @@
         updatePhotoStrip();
         renderTable();
 
-        // при первом запуске: пароль → имя → склад
         applyConfigFromHash();
-        fetchWarehouses();
 
-        if (!accessKey) {
-            setTimeout(() => askKey(true), 400);
-        } else if (!operator) {
-            setTimeout(() => askOperator(true), 400);
-        } else if (!warehouse) {
-            setTimeout(() => askWarehouse(true), 400);
+        /* ---------- в браузере не спрашиваем ничего ---------- */
+        function isStandalone() {
+            return window.navigator.standalone === true ||
+                   window.matchMedia('(display-mode: standalone)').matches;
+        }
+        function isIOS() {
+            return /iPad|iPhone|iPod/.test(navigator.userAgent);
+        }
+
+        function startApp() {
+            fetchWarehouses();
+            if (!accessKey) {
+                setTimeout(() => askKey(true), 400);
+            } else if (!operator) {
+                setTimeout(() => askOperator(true), 400);
+            } else if (!warehouse) {
+                setTimeout(() => askWarehouse(true), 400);
+            }
+        }
+
+        // на айфоне Safari и приложение с экрана «Домой» хранят данные раздельно,
+        // поэтому в браузере просим сначала установить — иначе всё вводить дважды
+        if (isIOS() && !isStandalone() && localStorage.getItem('inventorySkipInstall') !== '1') {
+            document.getElementById('installGate').classList.add('open');
+            document.body.style.overflow = 'hidden';
+
+            document.getElementById('gateSkip').addEventListener('click', () => {
+                localStorage.setItem('inventorySkipInstall', '1');
+                document.getElementById('installGate').classList.remove('open');
+                document.body.style.overflow = '';
+                startApp();
+            });
+        } else {
+            startApp();
         }
     </script>
 </body>
