@@ -1201,6 +1201,26 @@
            localStorage вмещает всего 5 МБ — при работе с фотографиями он
            переполнялся, и записи терялись. Всё тяжёлое переехало в IndexedDB. */
 
+        /* Идентификатор записи должен быть уникален по всем телефонам.
+           Раньше это было просто время в миллисекундах: два оператора могли
+           попасть в одну миллисекунду, и вторая запись отбрасывалась скриптом
+           как повтор. Теперь к времени добавляется метка устройства. */
+
+        function deviceTag() {
+            let t = localStorage.getItem('inventoryDevice');
+            if (!t) {
+                t = Math.random().toString(36).slice(2, 8);
+                localStorage.setItem('inventoryDevice', t);
+            }
+            return t;
+        }
+
+        let idCounter = 0;
+        function newRecordId() {
+            idCounter = (idCounter + 1) % 1000;
+            return Date.now() + '-' + deviceTag() + '-' + idCounter;
+        }
+
         let db = null;
 
         function idbOpen() {
@@ -1430,7 +1450,7 @@
             const fullPhoto2 = photoData2;
 
             const item = {
-                id: editingId || Date.now(),
+                id: editingId || newRecordId(),
                 photo: await compressPhoto(photoData, 520, 0.6),
                 photo2: await compressPhoto(photoData2, 520, 0.6),
                 name,
@@ -1663,36 +1683,60 @@
             sending = true;
             paintSync();
 
-            while (queue.length) {
-                const rec = queue[0];
-                let done = false;
+            try {
+                let attempts = 0;
 
-                try {
-                    const res = await fetch(CFG.url, {
-                        method: 'POST',
-                        body: JSON.stringify(Object.assign({ key: accessKey }, rec.payload))
-                    });
-                    const r = await res.json();
+                while (queue.length && attempts < queue.length + 3) {
+                    attempts++;
+                    const rec = queue[0];
+                    let done = false;
+                    let serverError = false;
 
-                    if (r.role) { CFG.role = r.role; cfgSave(); }
-                    if (r.code === 'auth') { keyRejected(); break; }
-                    if (r.status === 'success') done = true;
-                } catch (e) {
-                    // связь оборвалась — пробуем позже
+                    try {
+                        const res = await fetch(CFG.url, {
+                            method: 'POST',
+                            body: JSON.stringify(Object.assign({ key: accessKey }, rec.payload))
+                        });
+                        const r = await res.json();
+
+                        if (r.role) { CFG.role = r.role; cfgSave(); }
+                        if (r.code === 'auth') { keyRejected(); break; }
+                        if (r.status === 'success') done = true;
+                        else serverError = true;      // скрипт ответил, но с ошибкой
+                    } catch (e) {
+                        break;                        // связь оборвалась — ждём следующего раза
+                    }
+
+                    if (done) {
+                        try { await idbDel('outbox', rec.qid); } catch (e) {}
+                        queue.shift();
+                        refreshPending();
+                        paintSync();
+                        renderTable();
+                        continue;
+                    }
+
+                    if (serverError) {
+                        // одна проблемная запись не должна держать всю очередь:
+                        // отправляем её в конец и берёмся за следующие
+                        rec.tries = (rec.tries || 0) + 1;
+                        try { await idbPut('outbox', rec); } catch (e) {}
+                        queue.shift();
+                        queue.push(rec);
+
+                        if (rec.tries === 5) {
+                            alert('Запись «' + (rec.payload.name || '') + '» не принимается таблицей.\n' +
+                                  'Остальные записи отправляются, эта будет пробовать дальше.\n' +
+                                  'Покажите это сообщение ответственному.');
+                        }
+                    }
                 }
-
-                if (!done) break;
-
-                try { await idbDel('outbox', rec.qid); } catch (e) {}
-                queue.shift();
-                refreshPending();
+            } finally {
+                // без этого одна ошибка навсегда останавливала бы отправку
+                sending = false;
                 paintSync();
                 renderTable();
             }
-
-            sending = false;
-            paintSync();
-            renderTable();
         }
 
         function paintSync() {
