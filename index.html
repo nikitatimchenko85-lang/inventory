@@ -1136,7 +1136,7 @@
 
         /* Версию меняем при каждой правке приложения — по ней телефоны
            понимают, что появилась новая версия, и обновляются сами. */
-        const APP_VERSION = '2026-09-10-01';
+        const APP_VERSION = '2026-09-10-02';
 
         /* ---------- настройки ---------- */
         const CFG_DEFAULT = {
@@ -1488,7 +1488,7 @@
             }
 
             if (editingId) {
-                items = items.map(i => i.id === editingId ? item : i);
+                items = items.map(i => String(i.id) === String(editingId) ? item : i);
                 editingId = null;
                 document.getElementById('cancelBtn').style.display = 'none';
                 document.getElementById('submitBtn').textContent = 'Добавить';
@@ -1576,7 +1576,7 @@
         });
 
         function editItem(id) {
-            const item = items.find(i => i.id === id);
+            const item = items.find(i => String(i.id) === String(id));
             if (!item) return;
             document.getElementById('itemName').value = item.name;
             document.getElementById('quantity').value = item.quantity;
@@ -1594,12 +1594,12 @@
         }
 
         async function deleteItem(id) {
-            const item = items.find(i => i.id === id);
+            const item = items.find(i => String(i.id) === String(id));
             if (!item) return;
             if (!confirm('Удалить «' + item.name + '»?')) return;
             try { await sendDeleteToGoogleSheets(item); }
             catch (e) { feedbackBad(); return; }
-            items = items.filter(i => i.id !== id);
+            items = items.filter(i => String(i.id) !== String(id));
             await saveItems();
             renderTable();
         }
@@ -1834,13 +1834,13 @@
                         <div class="item-meta">${escapeHtml(meta)}</div>
                     </div>
                     <div class="item-actions">
-                        <button type="button" class="icon-btn" onclick="editItem(${item.id})" aria-label="Изменить">
+                        <button type="button" class="icon-btn" onclick="editItem('${item.id}')" aria-label="Изменить">
                             <svg viewBox="0 0 22 22" fill="none" aria-hidden="true">
                                 <path d="M14.6 3.9a1.9 1.9 0 0 1 2.7 0l.8.8a1.9 1.9 0 0 1 0 2.7L8.6 17H5v-3.6l9.6-9.5Z"
                                       stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
                             </svg>
                         </button>
-                        <button type="button" class="icon-btn destructive" onclick="deleteItem(${item.id})" aria-label="Удалить">
+                        <button type="button" class="icon-btn destructive" onclick="deleteItem('${item.id}')" aria-label="Удалить">
                             <svg viewBox="0 0 22 22" fill="none" aria-hidden="true">
                                 <path d="M4.5 6h13M9 6V4.6h4V6M6.5 6l.7 10.4a1.4 1.4 0 0 0 1.4 1.3h4.8a1.4 1.4 0 0 0 1.4-1.3L15.5 6"
                                       stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
