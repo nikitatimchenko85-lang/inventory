@@ -17,6 +17,7 @@
             --ios-blue: #007AFF;
             --ios-red: #FF3B30;
             --ios-green: #34C759;
+            --ios-orange: #FF9500;
             --ios-gray: #8E8E93;
             --ios-gray2: #C7C7CC;
             --ios-gray3: #E5E5EA;
@@ -37,6 +38,8 @@
                 --ios-blue: #0A84FF;
                 --ios-red: #FF453A;
                 --ios-green: #30D158;
+            --ios-orange: #FF9F0A;
+                --ios-orange: #FF9F0A;
                 --ios-gray: #98989F;
                 --ios-gray2: #5A5A5F;
                 --ios-gray3: #2C2C2E;
@@ -56,6 +59,7 @@
             --ios-blue: #0A84FF;
             --ios-red: #FF453A;
             --ios-green: #30D158;
+            --ios-orange: #FF9F0A;
             --ios-gray: #98989F;
             --ios-gray2: #5A5A5F;
             --ios-gray3: #2C2C2E;
@@ -97,6 +101,16 @@
             padding: 12px 16px calc(12px);
             padding-top: calc(12px + env(safe-area-inset-top, 0px));
         }
+
+        .sync {
+            display:flex; align-items:center; gap:7px;
+            margin-top:10px; padding:0; border:none; background:none;
+            font-family:inherit; font-size:13px; font-weight:500;
+            color:var(--ios-gray); cursor:pointer;
+        }
+        .sync.pending { color:var(--ios-orange, #FF9500); }
+        .sync.ok { color:var(--ios-green); }
+        .sync-dot { width:7px; height:7px; border-radius:50%; background:currentColor; }
 
         .chips {
             display: flex;
@@ -824,6 +838,9 @@
                 <span class="chip-value" id="warehouseName">—</span>
             </button>
         </div>
+        <button type="button" class="sync" id="syncBox">
+            <span class="sync-dot"></span><span id="syncText">—</span>
+        </button>
     </div>
 
     <div class="content">
@@ -1111,7 +1128,7 @@
 
         /* ---------- настройки ---------- */
         const CFG_DEFAULT = {
-            url: 'https://script.google.com/macros/s/AKfycbzMEgTrFgybubKjMedg-LFrKl87gWWf3nFs9iC58VA4B0Q06j_UjzvR5edREl2ofzeo/exec',
+            url: 'https://script.google.com/macros/s/AKfycbzSDZyAIwRncIQbOBKsoAlPl12HoDa5_KIApDpaf-oTRIroAaFF7K908dsje30qGpui/exec',
             sheetUrl: 'https://docs.google.com/spreadsheets/d/1YNFceMcy8vqtnr4vQJKLkU6IMHUwexfIdQ2FD_j4wPk/edit',
             photo: 'normal',
             feedback: 'both',
@@ -1528,48 +1545,120 @@
             });
         }
 
-        async function sendToGoogleSheets(item, isEdit = false) {
-            try {
-                const photo = item.photo ? await compressPhoto(item.photo) : '';
-                const photo2 = item.photo2 ? await compressPhoto(item.photo2) : '';
+        /* ======================= очередь отправки =======================
+           Раньше запись уходила «на авось»: если сеть моргнула или скрипт
+           был занят другим телефоном, она молча терялась. Теперь всё
+           складывается в очередь и отправляется по одной, с повторами. */
 
-                const data = {
-                    action: isEdit ? 'update' : 'add',
-                    key: accessKey,
-                    sheet: item.warehouse,
-                    id: String(item.id),
-                    operator: operator,
-                    name: item.name,
-                    quantity: item.quantity,
-                    warehouse: item.warehouse,
-                    notes: item.notes,
-                    condition: item.condition || '',
-                    working: item.working || '',
-                    photo: photo,
-                    photo2: photo2
-                };
+        let queue = [];
+        let sending = false;
 
-                fetch(CFG.url, { method: 'POST', body: JSON.stringify(data) })
-                    .then(r => r.json())
-                    .then(res => {
-                        if (res.code === 'auth') keyRejected();
-                        else console.log(res.status === 'success' ? '✅' : '❌', item.name);
-                    })
-                    .catch(err => console.error(err));
-            } catch (e) {
-                console.error(e);
+        function loadQueue() {
+            try { queue = JSON.parse(localStorage.getItem('inventoryQueue') || '[]'); }
+            catch (e) { queue = []; }
+        }
+
+        function saveQueue() {
+            try { localStorage.setItem('inventoryQueue', JSON.stringify(queue)); return true; }
+            catch (e) { return false; }
+        }
+
+        function enqueue(payload) {
+            queue.push(payload);
+            if (!saveQueue()) {
+                // память кончилась — жертвуем фото у старых записей
+                queue.forEach(q => { if (q !== payload) { q.photo = ''; q.photo2 = ''; } });
+                if (!saveQueue()) {
+                    queue.pop();
+                    alert('Память телефона переполнена.\nДождитесь отправки очереди.');
+                    return;
+                }
             }
+            paintSync();
+            flush();
+        }
+
+        async function flush() {
+            if (sending || !queue.length || !navigator.onLine) return;
+            sending = true;
+            paintSync();
+
+            while (queue.length) {
+                const item = queue[0];
+                let ok = false;
+
+                try {
+                    const res = await fetch(CFG.url, {
+                        method: 'POST',
+                        body: JSON.stringify(Object.assign({ key: accessKey }, item))
+                    });
+                    const r = await res.json();
+
+                    if (r.role) { CFG.role = r.role; cfgSave(); }
+
+                    if (r.code === 'auth') { keyRejected(); break; }
+                    if (r.status === 'success') ok = true;
+                    // «Таблица занята» и прочие ошибки — оставляем в очереди
+                } catch (e) {
+                    // связь пропала
+                }
+
+                if (!ok) break;
+
+                queue.shift();
+                saveQueue();
+                paintSync();
+            }
+
+            sending = false;
+            paintSync();
+        }
+
+        function paintSync() {
+            const box = document.getElementById('syncBox');
+            const txt = document.getElementById('syncText');
+            if (!box) return;
+
+            box.className = 'sync';
+            if (sending) { box.classList.add('pending'); txt.textContent = 'Отправка… осталось ' + queue.length; return; }
+            if (!navigator.onLine) { box.classList.add('pending'); txt.textContent = 'Нет связи · ждут ' + queue.length; return; }
+            if (queue.length) { box.classList.add('pending'); txt.textContent = 'Ждут отправки: ' + queue.length; return; }
+            box.classList.add('ok');
+            txt.textContent = 'Всё отправлено';
+        }
+
+        window.addEventListener('online', flush);
+        setInterval(flush, 15000);
+
+        /* ---------- постановка в очередь ---------- */
+
+        async function sendToGoogleSheets(item, isEdit = false) {
+            const photo = item.photo ? await compressPhoto(item.photo) : '';
+            const photo2 = item.photo2 ? await compressPhoto(item.photo2) : '';
+
+            enqueue({
+                action: isEdit ? 'update' : 'add',
+                sheet: item.warehouse,
+                id: String(item.id),
+                operator: operator,
+                name: item.name,
+                quantity: item.quantity,
+                warehouse: item.warehouse,
+                notes: item.notes,
+                condition: item.condition || '',
+                working: item.working || '',
+                photo: photo,
+                photo2: photo2
+            });
         }
 
         function sendDeleteToGoogleSheets(item) {
-            fetch(CFG.url, {
-                method: 'POST',
-                body: JSON.stringify({ action: 'delete', key: accessKey, sheet: item.warehouse,
-                                       id: String(item.id), name: item.name })
-            })
-                .then(r => r.json())
-                .then(res => { if (res.code === 'auth') keyRejected(); })
-                .catch(e => console.error(e));
+            enqueue({
+                action: 'delete',
+                sheet: item.warehouse,
+                id: String(item.id),
+                name: item.name
+            });
         }
 
         /* ---------- Список ---------- */
@@ -2046,6 +2135,7 @@
         renderTable();
 
         applyConfigFromHash();
+        document.getElementById('syncBox').addEventListener('click', flush);
 
         /* ---------- в браузере не спрашиваем ничего ---------- */
         function isStandalone() {
@@ -2057,6 +2147,9 @@
         }
 
         function startApp() {
+            loadQueue();
+            paintSync();
+            flush();
             fetchWarehouses();
             if (!accessKey) {
                 setTimeout(() => askKey(true), 400);
