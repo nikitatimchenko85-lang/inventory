@@ -427,6 +427,11 @@
             min-width: 0;
         }
 
+        .wait-dot {
+            display:inline-block; width:7px; height:7px; border-radius:50%;
+            background:var(--ios-orange); margin-right:7px; vertical-align:middle;
+        }
+
         .item-name {
             font-size: 17px;
             font-weight: 500;
@@ -1128,7 +1133,7 @@
 
         /* ---------- настройки ---------- */
         const CFG_DEFAULT = {
-            url: 'https://script.google.com/macros/s/AKfycbzSDZyAIwRncIQbOBKsoAlPl12HoDa5_KIApDpaf-oTRIroAaFF7K908dsje30qGpui/exec',
+            url: 'https://script.google.com/macros/s/AKfycbyPHkfzh5CVZkxhThuTR-JfBk-LzAntiyvmkunDI7MwCEaFOrkquZ-8DeWbHQcBD77H/exec',
             sheetUrl: 'https://docs.google.com/spreadsheets/d/1YNFceMcy8vqtnr4vQJKLkU6IMHUwexfIdQ2FD_j4wPk/edit',
             photo: 'normal',
             feedback: 'both',
@@ -1192,26 +1197,67 @@
         // ссылка на таблицу для значка внизу экрана; оставьте пустой — значок не появится
 
 
-        function saveItems() {
-            try {
-                localStorage.setItem('inventoryItems', JSON.stringify(items));
-            } catch (e) {
-                // память кончилась — освобождаем место за счёт самых старых записей
-                while (items.length > 5) {
-                    items = items.slice(-Math.ceil(items.length / 2));
-                    try {
-                        localStorage.setItem('inventoryItems', JSON.stringify(items));
-                        renderTable();
-                        return;
-                    } catch (e2) { /* пробуем ещё раз */ }
-                }
-                alert('Не удалось сохранить список в памяти телефона. Записи уже отправлены в таблицу.');
-            }
+        /* ======================= хранилище =======================
+           localStorage вмещает всего 5 МБ — при работе с фотографиями он
+           переполнялся, и записи терялись. Всё тяжёлое переехало в IndexedDB. */
+
+        let db = null;
+
+        function idbOpen() {
+            return new Promise((resolve, reject) => {
+                const req = indexedDB.open('inventory', 1);
+                req.onupgradeneeded = (e) => {
+                    const d = e.target.result;
+                    if (!d.objectStoreNames.contains('outbox')) d.createObjectStore('outbox', { keyPath: 'qid' });
+                    if (!d.objectStoreNames.contains('meta')) d.createObjectStore('meta');
+                };
+                req.onsuccess = (e) => resolve(e.target.result);
+                req.onerror = () => reject(req.error);
+            });
         }
 
-        function loadItems() {
-            const saved = localStorage.getItem('inventoryItems');
-            items = saved ? JSON.parse(saved) : [];
+        function idbRun(store, mode, fn) {
+            return new Promise((resolve, reject) => {
+                if (!db) { reject(new Error('нет базы')); return; }
+                const tx = db.transaction(store, mode);
+                const os = tx.objectStore(store);
+                const req = fn(os);
+                tx.oncomplete = () => resolve(req ? req.result : undefined);
+                tx.onerror = () => reject(tx.error);
+                tx.onabort = () => reject(tx.error);
+            });
+        }
+
+        const idbPut    = (store, val, key) => idbRun(store, 'readwrite', os => os.put(val, key));
+        const idbGet    = (store, key)      => idbRun(store, 'readonly',  os => os.get(key));
+        const idbGetAll = (store)           => idbRun(store, 'readonly',  os => os.getAll());
+        const idbDel    = (store, key)      => idbRun(store, 'readwrite', os => os.delete(key));
+
+        /* ---------- список последних записей ---------- */
+
+        async function saveItems() {
+            if (items.length > CFG.maxLocal) items = items.slice(-CFG.maxLocal);
+            try { await idbPut('meta', items, 'items'); }
+            catch (e) { console.error('Не удалось сохранить список:', e); }
+        }
+
+        async function loadItems() {
+            try {
+                const saved = await idbGet('meta', 'items');
+                items = Array.isArray(saved) ? saved : [];
+            } catch (e) { items = []; }
+
+            // разовый перенос из старого хранилища
+            const legacy = localStorage.getItem('inventoryItems');
+            if (legacy) {
+                try {
+                    const old = JSON.parse(legacy);
+                    if (Array.isArray(old) && old.length && !items.length) items = old;
+                } catch (e) {}
+                localStorage.removeItem('inventoryItems');
+                await saveItems();
+            }
+
             if (items.length > CFG.maxLocal) items = items.slice(-CFG.maxLocal);
         }
 
@@ -1400,20 +1446,31 @@
                 photo2: photosDirty ? fullPhoto2 : ''
             });
 
+            // сначала ставим в очередь: пока запись не легла в хранилище,
+            // считать её сохранённой нельзя — иначе она пропадёт незаметно
+            try {
+                if (editingId) {
+                    await sendToGoogleSheets(forUpload, true);
+                } else {
+                    await sendToGoogleSheets(
+                        Object.assign({}, item, { photo: fullPhoto, photo2: fullPhoto2 }));
+                }
+            } catch (e) {
+                feedbackBad();
+                return;   // запись остаётся в форме, ничего не потеряно
+            }
+
             if (editingId) {
                 items = items.map(i => i.id === editingId ? item : i);
                 editingId = null;
                 document.getElementById('cancelBtn').style.display = 'none';
                 document.getElementById('submitBtn').textContent = 'Добавить';
-                await sendToGoogleSheets(forUpload, true);
             } else {
-                items.push(item);
                 // в таблице записи остаются навсегда, в телефоне — только последние
-                if (items.length > CFG.maxLocal) items = items.slice(-CFG.maxLocal);
-                await sendToGoogleSheets(Object.assign({}, item, { photo: fullPhoto, photo2: fullPhoto2 }));
+                items.push(item);
             }
 
-            saveItems();
+            await saveItems();
             resetForm();
             renderTable();
             feedbackOk();
@@ -1509,13 +1566,14 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        function deleteItem(id) {
+        async function deleteItem(id) {
             const item = items.find(i => i.id === id);
             if (!item) return;
             if (!confirm('Удалить «' + item.name + '»?')) return;
-            sendDeleteToGoogleSheets(item);
+            try { await sendDeleteToGoogleSheets(item); }
+            catch (e) { feedbackBad(); return; }
             items = items.filter(i => i.id !== id);
-            saveItems();
+            await saveItems();
             renderTable();
         }
 
@@ -1546,34 +1604,56 @@
         }
 
         /* ======================= очередь отправки =======================
-           Раньше запись уходила «на авось»: если сеть моргнула или скрипт
-           был занят другим телефоном, она молча терялась. Теперь всё
-           складывается в очередь и отправляется по одной, с повторами. */
+           Записи лежат в IndexedDB и уходят по одной. Пока сервер не
+           подтвердил — запись из очереди не исчезает. Повторная отправка
+           той же записи безопасна: скрипт узнаёт её по ID и не дублирует. */
 
         let queue = [];
         let sending = false;
+        let pendingIds = new Set();
 
-        function loadQueue() {
-            try { queue = JSON.parse(localStorage.getItem('inventoryQueue') || '[]'); }
+        async function loadQueue() {
+            try { queue = await idbGetAll('outbox') || []; }
             catch (e) { queue = []; }
-        }
+            queue.sort((a, b) => a.qid - b.qid);
 
-        function saveQueue() {
-            try { localStorage.setItem('inventoryQueue', JSON.stringify(queue)); return true; }
-            catch (e) { return false; }
-        }
-
-        function enqueue(payload) {
-            queue.push(payload);
-            if (!saveQueue()) {
-                // память кончилась — жертвуем фото у старых записей
-                queue.forEach(q => { if (q !== payload) { q.photo = ''; q.photo2 = ''; } });
-                if (!saveQueue()) {
-                    queue.pop();
-                    alert('Память телефона переполнена.\nДождитесь отправки очереди.');
-                    return;
-                }
+            // перенос очереди из старого хранилища
+            const legacy = localStorage.getItem('inventoryQueue');
+            if (legacy) {
+                try {
+                    const old = JSON.parse(legacy);
+                    if (Array.isArray(old)) {
+                        for (const p of old) {
+                            const rec = { qid: Date.now() + Math.random(), payload: p };
+                            await idbPut('outbox', rec);
+                            queue.push(rec);
+                        }
+                    }
+                } catch (e) {}
+                localStorage.removeItem('inventoryQueue');
             }
+            refreshPending();
+        }
+
+        function refreshPending() {
+            pendingIds = new Set(queue.map(q => String(q.payload.id || '')));
+        }
+
+        async function enqueue(payload) {
+            const rec = { qid: Date.now() + Math.random(), payload: payload };
+            try {
+                await idbPut('outbox', rec);
+            } catch (e) {
+                alert('Телефон не смог сохранить запись.\n\n' +
+                      'Скорее всего кончилось место. Что делать:\n' +
+                      '1. Дождитесь, пока уйдут записи из очереди — счётчик вверху экрана.\n' +
+                      '2. Если очередь пуста, освободите место на телефоне.\n' +
+                      '3. Затем нажмите «Добавить» ещё раз — данные в форме сохранились.\n\n' +
+                      'Запись НЕ потеряна: она осталась в форме.');
+                throw e;
+            }
+            queue.push(rec);
+            refreshPending();
             paintSync();
             flush();
         }
@@ -1584,34 +1664,35 @@
             paintSync();
 
             while (queue.length) {
-                const item = queue[0];
-                let ok = false;
+                const rec = queue[0];
+                let done = false;
 
                 try {
                     const res = await fetch(CFG.url, {
                         method: 'POST',
-                        body: JSON.stringify(Object.assign({ key: accessKey }, item))
+                        body: JSON.stringify(Object.assign({ key: accessKey }, rec.payload))
                     });
                     const r = await res.json();
 
                     if (r.role) { CFG.role = r.role; cfgSave(); }
-
                     if (r.code === 'auth') { keyRejected(); break; }
-                    if (r.status === 'success') ok = true;
-                    // «Таблица занята» и прочие ошибки — оставляем в очереди
+                    if (r.status === 'success') done = true;
                 } catch (e) {
-                    // связь пропала
+                    // связь оборвалась — пробуем позже
                 }
 
-                if (!ok) break;
+                if (!done) break;
 
+                try { await idbDel('outbox', rec.qid); } catch (e) {}
                 queue.shift();
-                saveQueue();
+                refreshPending();
                 paintSync();
+                renderTable();
             }
 
             sending = false;
             paintSync();
+            renderTable();
         }
 
         function paintSync() {
@@ -1636,7 +1717,7 @@
             const photo = item.photo ? await compressPhoto(item.photo) : '';
             const photo2 = item.photo2 ? await compressPhoto(item.photo2) : '';
 
-            enqueue({
+            await enqueue({
                 action: isEdit ? 'update' : 'add',
                 sheet: item.warehouse,
                 id: String(item.id),
@@ -1652,8 +1733,8 @@
             });
         }
 
-        function sendDeleteToGoogleSheets(item) {
-            enqueue({
+        async function sendDeleteToGoogleSheets(item) {
+            await enqueue({
                 action: 'delete',
                 sheet: item.warehouse,
                 id: String(item.id),
@@ -1689,12 +1770,16 @@
                     </svg>
                 </div>`;
 
-                const meta = [item.quantity + ' шт', item.warehouse, item.condition, item.working, item.notes].filter(Boolean).join(' · ');
+                const waiting = pendingIds.has(String(item.id));
+                const meta = [
+                    item.quantity + ' шт', item.warehouse,
+                    item.condition, item.working, item.notes
+                ].filter(Boolean).join(' · ');
 
                 html += `<div class="item-row">
                     <div class="item-photos">${photos}</div>
                     <div class="item-info">
-                        <div class="item-name">${escapeHtml(item.name)}</div>
+                        <div class="item-name">${waiting ? '<span class="wait-dot"></span>' : ''}${escapeHtml(item.name)}</div>
                         <div class="item-meta">${escapeHtml(meta)}</div>
                     </div>
                     <div class="item-actions">
@@ -2126,13 +2211,11 @@
             if (row) row.style.display = CFG.sheetUrl ? 'flex' : 'none';
         }
 
-        loadItems();
         loadKey();
         loadWarehouses();
         loadOperator();
         loadWarehouse();
         updatePhotoStrip();
-        renderTable();
 
         applyConfigFromHash();
         document.getElementById('syncBox').addEventListener('click', flush);
@@ -2146,8 +2229,13 @@
             return /iPad|iPhone|iPod/.test(navigator.userAgent);
         }
 
-        function startApp() {
-            loadQueue();
+        async function startApp() {
+            try { db = await idbOpen(); }
+            catch (e) { alert('Не удалось открыть хранилище телефона.\nЗаписи могут не сохраняться.'); }
+
+            await loadItems();
+            await loadQueue();
+            renderTable();
             paintSync();
             flush();
             fetchWarehouses();
