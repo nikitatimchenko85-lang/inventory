@@ -1071,6 +1071,9 @@
         <div class="set-group">
             <div class="set-title">Материалы</div>
             <div class="set-card">
+                <button type="button" class="set-row" id="cfgVersion">
+                    <span class="k">Версия</span><span class="v" id="cfgVersionV"></span><span class="chev">›</span>
+                </button>
                 <a class="set-row" href="instruction.html">
                     <span class="k">Как пользоваться</span><span class="v"></span><span class="chev">›</span>
                 </a>
@@ -1130,6 +1133,10 @@
         let photosDirty = false;
         let warehouse = '';
         let accessKey = '';
+
+        /* Версию меняем при каждой правке приложения — по ней телефоны
+           понимают, что появилась новая версия, и обновляются сами. */
+        const APP_VERSION = '2026-09-10-01';
 
         /* ---------- настройки ---------- */
         const CFG_DEFAULT = {
@@ -2142,6 +2149,8 @@
             markSeg('setPhoto', CFG.photo);
             markSeg('setMaxLocal', String(CFG.maxLocal));
 
+            document.getElementById('cfgVersionV').textContent = APP_VERSION;
+
             const openSheet = document.getElementById('cfgOpenSheet');
             openSheet.href = CFG.sheetUrl || '#';
             openSheet.style.display = CFG.sheetUrl ? 'flex' : 'none';
@@ -2198,6 +2207,8 @@
                 alert('Не удалось связаться со скриптом.\nПроверьте ссылку и интернет.');
             }
         });
+
+        document.getElementById('cfgVersion').addEventListener('click', () => checkUpdate(true));
 
         /* --- оператор --- */
 
@@ -2263,6 +2274,39 @@
 
         applyConfigFromHash();
         document.getElementById('syncBox').addEventListener('click', flush);
+
+        /* ---------- проверка обновлений ----------
+           iPhone держит стартовую страницу в кэше и сам её не перепроверяет,
+           поэтому раньше приходилось удалять значок с экрана и добавлять заново. */
+
+        async function checkUpdate(loud) {
+            try {
+                const res = await fetch(location.pathname + '?_=' + Date.now(), { cache: 'no-store' });
+                const text = await res.text();
+                const m = text.match(/APP_VERSION\s*=\s*'([^']+)'/);
+                if (!m) return false;
+
+                if (m[1] !== APP_VERSION) {
+                    if (queue.length) {
+                        // сначала отправим накопленное, обновимся позже
+                        if (loud) alert('Есть новая версия, но сначала уйдут записи из очереди.');
+                        return false;
+                    }
+                    location.replace(location.pathname + '?v=' + encodeURIComponent(m[1]));
+                    return true;
+                }
+                if (loud) alert('Установлена последняя версия: ' + APP_VERSION);
+            } catch (e) {
+                if (loud) alert('Не удалось проверить обновление.');
+            }
+            return false;
+        }
+
+        // при запуске и при возвращении в приложение
+        setTimeout(() => checkUpdate(false), 3000);
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) setTimeout(() => checkUpdate(false), 1500);
+        });
 
         /* ---------- в браузере не спрашиваем ничего ---------- */
         function isStandalone() {
